@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}取引の削除確認{% endblock %}
+
+{% block body %}
+<p>本当に削除するには以下の「削除」リンクを押してください。</p>
+
+<table>
+    <tr><th>削除</th><th>日付</th><th>借方</th><th>金額</th><th>貸方</th><th>摘要</th><th>開始</th><th>終了</th></tr>
+    <tr>
+        <td><a href="/transactions/delete/{{ transaction.id }}?next={{ request.args.get('next') | urlencode }}">削除</a></td>
+        <td>{{ transaction.date }}</td>
+        <td>{{ transaction.debit }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(transaction.amount) }}</td>
+        <td>{{ transaction.credit }}</td>
+        <td>{{ transaction.note }}</td>
+        <td>{% if transaction.start is not none %}{{ transaction.start.strftime('%Y-%m') }}{% endif %}</td>
+        <td>{% if transaction.end is not none %}{{ transaction.end.strftime('%Y-%m') }}{% endif %}</td>
+    </tr>
+</table>
+
+{% endblock %}

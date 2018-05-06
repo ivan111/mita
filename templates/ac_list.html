@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}勘定科目の一覧{% endblock %}
+
+{% block body %}
+
+<p>
+    <a href="/accounts/create">追加</a>
+</p>
+
+<table>
+    <tr><th>削除</th><th>タイプ</th><th>名前</th><th>更新</th></tr>
+    {% for d in accounts %}
+    <tr>
+        <td><a href="/accounts/confirm_delete/{{ d.id }}">削除</a></td>
+        <td>{{ d.type | ac_type2name }}</td>
+        <td>{{ d.name }}</td>
+        <td><a href="/accounts/update/{{ d.id }}">更新</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

@@ -1,0 +1,44 @@
+body {
+    margin: 2%;
+}
+
+h2 {
+    color: DarkSlateGrey;
+}
+
+h3 {
+    color: DarkGreen;
+}
+
+h4 {
+    color: OrangeRed;
+}
+
+p {
+    width: 100%;
+    line-height: 1.5em;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid black;
+}
+
+th {
+    background-color: HoneyDew;
+}
+
+th, td {
+    padding: 0.2em 1em;
+}
+
+.axis text {
+    font-size: 12px;
+}
+
+.bar rect {
+    cursor: pointer;
+}

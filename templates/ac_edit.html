@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}勘定科目の一覧{% if account.id %}更新{% else %}追加{% endif %}{% endblock %}
+
+{% block body %}
+
+{% if account.error_msg %}
+<p>{{ account.error_msg }}</p>
+{% endif %}
+
+<form method="post" action="">
+
+    <input type='hidden' name='id' value='{{ account.id }}' />
+
+<table>
+    <tr><th><label for="id_type">Type:</label></th><td><select name="type" required id="id_type">
+        <option value="">---------</option>
+        {% for ac in ['資産', '負債', '収入', '支出', 'その他'] %}
+        {% if loop.index == account.type %}
+        <option value="{{ loop.index }}" selected>{{ ac }}</option>
+        {% else %}
+        <option value="{{ loop.index }}">{{ ac }}</option>
+        {% endif %}
+        {% endfor %}
+        </td></tr>
+
+    <tr><th><label for="id_name">Name:</label></th><td><input type="text" name="name" value="{{ account.name }}" required id="id_name" /></td></tr>
+
+    <tr><td colspan='2'><input type="submit" value="{% if account.id %}更新{% else %}追加{% endif %}"></td></tr>
+</table>
+</form>
+
+{% endblock %}

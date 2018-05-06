@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{% block title %}{% endblock %} - 家計簿</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div style="margin-bottom: 1em;">
+<a href="/transactions/now">取引</a>　|　
+<a href="/balance">残高</a>　|　
+<a href="/chart">グラフ</a>　|　
+<a href="/accounts">勘定科目</a>
+</div>
+
+{% block body %}
+{% endblock %}
+
+</body>
+
+</html>
+

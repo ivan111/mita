@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}残高{% endblock %}
+
+{% block body %}
+
+<table>
+    <tr><th>区分</th><th>勘定科目</th><th>残高</th></tr>
+    {# 資産 #}
+    {% for d in assets %}
+    <tr><td>資産</td><td>{{ d.name }}</td><td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td></tr>
+    {% endfor %}
+
+    <tr style="background-color: #ddf;"><td colspan="2">資産合計</td><td style="text-align: right;">{{ "{0:,}".format(sum_assets) }}</td></tr>
+
+    {# 負債 #}
+    {% for d in liabilities %}
+    <tr><td>負債</td><td>{{ d.name }}</td><td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td></tr>
+    {% endfor %}
+
+    <tr style="background-color: #ddf;"><td colspan="2">負債合計</td><td style="text-align: right;">{{ "{0:,}".format(sum_liabilities) }}</td></tr>
+
+    {# 純資産 #}
+    <tr style="background-color: #bbf;"><td colspan="2">純資産</td><td style="text-align: right;">{{ "{0:,}".format(sum_assets + sum_liabilities) }}</td></tr>
+</table>
+
+{% endblock %}

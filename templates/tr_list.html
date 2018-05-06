@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}取引の一覧{% endblock %}
+
+{% block body %}
+
+<p>
+    <a href="/transactions/create?next={{ request.full_path | urlencode }}">追加</a>
+
+    <span>　year filter : </span>
+    {% if year == 0 %}All{% else %}<a href="/transactions/all">All</a>{% endif %}
+
+    {% for y in years %}
+    , {% if y == year %}{{ y }}{% else %}<a href={{ y }}>{{ y }}</a>{% endif %}
+    {% endfor %}
+
+    {% if request.args.get('account') %}
+    <span>　account filter : </span>
+    <a href="{{ request.path }}">All</a>, {{ request.args.get('account') }}
+    {% endif %}
+</p>
+
+<table>
+    <tr><th>削除</th><th>日付</th><th>借方</th><th>金額</th><th>貸方</th><th>摘要</th><th>開始</th><th>終了</th><th>更新</th></tr>
+    {% for d in transactions %}
+    <tr>
+        <td><a href="/transactions/confirm_delete/{{ d.id }}?next={{ request.full_path | urlencode }}">削除</a></td>
+        <td>{{ d.date }}</td>
+        <td><a href="?account={{ d.debit_id }}">{{ d.debit }}</a></td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
+        <td><a href="?account={{ d.credit_id }}">{{ d.credit }}</a></td>
+        <td>{{ d.note }}</td>
+        <td>{% if d.start is not none %}{{ d.start.strftime('%Y-%m') }}{% endif %}</td>
+        <td>{% if d.end is not none %}{{ d.end.strftime('%Y-%m') }}{% endif %}</td>
+        <td><a href="/transactions/update/{{ d.id }}?next={{ request.full_path | urlencode }}">更新</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
