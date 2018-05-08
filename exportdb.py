@@ -59,7 +59,18 @@ def use_exportdb(app):
 
         for d in rows:
             date = d['date'].strftime('%Y-%m-%d')
-            f.write('\t'.join([date, d['debit'], d['credit'], str(d['amount']), d['note']]))
+
+            if d['start']:
+                start = d['start'].strftime('%Y-%m')
+            else:
+                start = ''
+
+            if d['end']:
+                end = d['end'].strftime('%Y-%m')
+            else:
+                end = ''
+
+            f.write('\t'.join([date, d['debit'], d['credit'], str(d['amount']), d['note'], start, end]))
             f.write('\n')
 
         f.close()

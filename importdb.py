@@ -1,7 +1,9 @@
+import datetime
 import os
 import re
 import sys
 
+from dateutil.relativedelta import relativedelta
 import click
 
 from db import get_db, DATABASE
@@ -112,6 +114,7 @@ def use_importdb(app):
         return name2id
 
     RE_DATE = re.compile(r'^[12]\d{3}-[01]\d-[0123]\d$')
+    RE_YM = re.compile(r'^[12]\d{3}-[01]\d$')
 
     def read_transactions_tsv(db, filename):
         name2id = create_name2id(db)
@@ -130,11 +133,11 @@ def use_importdb(app):
 
             row = line.split('\t')
 
-            if len(row) != 5:
+            if len(row) != 7:
                 perror(filename, line, lineno,
-                    '列の数が正しくありません。すべての列がタブで区切られているか確認してください。必要な列数 = 5, 読み込まれたの列数 = {}'.format(len(row)))
+                    '列の数が正しくありません。すべての列がタブで区切られているか確認してください。必要な列数 = 7, 読み込まれたの列数 = {}'.format(len(row)))
 
-            date, debit, credit, amount_str, note = row
+            date, debit, credit, amount_str, note, start, end = row
 
             if not RE_DATE.match(date):
                 perror(filename, line, lineno,
@@ -158,20 +161,40 @@ def use_importdb(app):
                 perror(filename, line, lineno,
                     '金額が数値ではありません。{}'.format(amount_str))
 
+            if start == '':
+                start = None
+            elif RE_YM.match(start):
+                start = start + '-01'
+            else:
+                perror(filename, line, lineno,
+                    '開始日付の形式(YYYY-MM)が正しくありません。{}'.format(start))
+
+            if end == '':
+                end = None
+            elif RE_YM.match(end):
+                end_dt = datetime.datetime.strptime(end + '-01', '%Y-%m-%d')
+                end_dt = end_dt + relativedelta(months=+1, days=-1)
+                end = end_dt.strftime('%Y-%m-%d')
+            else:
+                perror(filename, line, lineno,
+                    '終了日付の形式(YYYY-MM)が正しくありません。{}'.format(end))
+
             transactions.append({
                 'date': date,
                 'debit_id': debit_id,
                 'credit_id': credit_id,
                 'amount': amount,
                 'note': note,
+                'start': start,
+                'end': end,
             })
 
         print('{} 読み込み件数 = {}'.format(filename, len(transactions)))
 
         return transactions
 
-    INSERT_TRANSACTION_SQL = 'INSERT INTO transactions(date, debit_id, credit_id, amount, note) VALUES (?,?,?,?,?)'
+    INSERT_TRANSACTION_SQL = 'INSERT INTO transactions(date, debit_id, credit_id, amount, note, start, end) VALUES (?,?,?,?,?,?,?)'
 
     def insert_transactions(db, transactions):
         for d in transactions:
-            db.execute(INSERT_TRANSACTION_SQL, [d['date'], d['debit_id'], d['credit_id'], d['amount'], d['note']])
+            db.execute(INSERT_TRANSACTION_SQL, [d['date'], d['debit_id'], d['credit_id'], d['amount'], d['note'], d['start'], d['end']])
