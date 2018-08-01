@@ -157,7 +157,7 @@ def use_chart(app):
         return (d1.year - d2.year) * 12 + d1.month - d2.month + 1
 
     def accum_bs(dataset, accounts, start):
-        end = datetime.date.today()
+        end = datetime.date.today() + datetime.timedelta(days=1)
 
         for account in accounts:
             if account['type'] not in (TYPE_ASSETS, TYPE_LIABILITIES):
@@ -183,7 +183,7 @@ def use_chart(app):
 
         rows.append(title_row)
 
-        end = datetime.date.today()
+        end = datetime.date.today() + datetime.timedelta(days=1)
 
         for ym in iter_between(start, end):
             row = [ym]
