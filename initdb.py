@@ -1,6 +1,6 @@
 import os
 
-from db import get_db, DATABASE
+from db import get_db, close_db, DATABASE
 
 def use_initdb(app):
     CREATE_TRANSACTIONS_TABLE_SQL = '''
@@ -23,6 +23,8 @@ def use_initdb(app):
         name varchar(16) NOT NULL
     )
     '''
+
+    app.teardown_appcontext(close_db)
 
     @app.cli.command()
     def initdb():
