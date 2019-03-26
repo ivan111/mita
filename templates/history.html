@@ -1,0 +1,19 @@
+{% macro render_history(history) %}
+<table>
+    <tr><th>operation</th><th>operate time</th><th>id</th><th>date</th><th>debit</th><th>amount</th><th>credit</th><th>description</th><th>start</th><th>end</th></tr>
+    {% for d in history %}
+    <tr>
+        <td>{{ d.operation }}</td>
+        <td>{{ d.operate_time }}</td>
+        <td><a href="/transactions/{{ d.transaction_id }}">{{ d.transaction_id }}</a></td>
+        <td>{{ d.date }}</td>
+        <td><a href="/accounts/{{ d.debit_id }}">{{ d.debit }}</a></td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
+        <td><a href="/accounts/{{ d.credit_id }}">{{ d.credit }}</a></td>
+        <td>{{ d.description }}</td>
+        <td>{% if d.start_month is not none %}{{ d.start_month }}{% endif %}</td>
+        <td>{% if d.end_month is not none %}{{ d.end_month }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}

@@ -1,5 +1,2 @@
 __pycache__/
-*.py[cod]
-db.sqlite3
-export_*.tsv
-d3.v5.min.js
+*.py

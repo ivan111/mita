@@ -1,30 +1,24 @@
-from flask import Flask, render_template
+import os
 
-from initdb import use_initdb
-from importdb import use_importdb
-from exportdb import use_exportdb
+from flask import Flask
 
+from db import use_db
+from index import use_index
 from tr_view import use_transactions
-from ac_view import use_accounts
-from balance_view import use_balance
 from chart_view import use_chart
+from ac_view import use_accounts
+from hl_view import use_history
+from api import use_api
+from jinja import use_jinja
+
 
 app = Flask(__name__)
 
-use_initdb(app)
-use_importdb(app)
-use_exportdb(app)
-
+use_db(app)
+use_index(app)
 use_transactions(app)
-use_accounts(app)
-use_balance(app)
 use_chart(app)
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+use_accounts(app)
+use_history(app)
+use_api(app)
+use_jinja(app)

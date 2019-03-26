@@ -1,0 +1,25 @@
+{% macro render_transactions(transactions, is_confirm_delete=False) %}
+<table>
+    <tr><th>id</th>{% if not is_confirm_delete %}<th>update</th>{% endif %}<th>date</th><th>debit</th><th>amount</th><th>credit</th><th>description</th><th>start</th><th>end</th><th>delete</th></tr>
+    {% for d in transactions %}
+    <tr>
+        <td><a href="/transactions/{{ d.transaction_id }}">{{ d.transaction_id }}</a></td>
+        {% if not is_confirm_delete %}
+        <td><a href="/transactions/update/{{ d.transaction_id }}?next={{ request.full_path | urlencode }}">update</a></td>
+        {% endif %}
+        <td>{{ d.date }}</td>
+        <td><a href="/accounts/{{ d.debit_id }}">{{ d.debit }}</a></td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
+        <td><a href="/accounts/{{ d.credit_id }}">{{ d.credit }}</a></td>
+        <td>{{ d.description }}</td>
+        <td>{% if d.start_month is not none %}{{ d.start_month }}{% endif %}</td>
+        <td>{% if d.end_month is not none %}{{ d.end_month }}{% endif %}</td>
+        {% if is_confirm_delete %}
+        <td><a href="/transactions/delete/{{ d.transaction_id }}?next={{ request.args.get('next') | urlencode }}">delete</a></td>
+        {% else %}
+        <td><a href="/transactions/confirm_delete/{{ d.transaction_id }}?next={{ request.full_path | urlencode }}">delete</a></td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}

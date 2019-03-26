@@ -1,70 +1,97 @@
-import datetime
+from flask import render_template, request, redirect, abort
+from psycopg2.extras import RealDictCursor
 
-from flask import render_template, request, redirect, g
-
-from db import get_db
+import db
 from transaction import Transaction
+from pagination import Pagination
+
+PER_PAGE = 20
 
 
 def use_transactions(app):
 
     # ------------------------------------------------------------------------
+    # Detail
+    # ------------------------------------------------------------------------
+
+    TRANSACTION_SQL = '''
+    SELECT *
+    FROM transactions_view
+    WHERE transaction_id = %s
+    '''
+
+    HISTORY_SQL = '''
+    SELECT *
+    FROM history_view
+    WHERE transaction_id = %s
+    ORDER BY operate_time DESC
+    '''
+
+    SUMMARY_SQL = '''
+    SELECT ac.name, tm.month,
+           SUM(accrual_debit_amount) as accrual_debit_amount,
+           SUM(accrual_credit_amount) as accrual_credit_amount,
+           SUM(cash_debit_amount) as cash_debit_amount,
+           SUM(cash_credit_amount) as cash_credit_amount
+    FROM transactions_month AS tm
+         LEFT JOIN accounts AS ac ON tm.account_id = ac.account_id
+    WHERE tm.transaction_id = %s
+    GROUP BY ac.name, tm.account_id, tm.month
+    ORDER BY tm.month, tm.account_id
+    '''
+
+    @app.route('/transactions/<int:id>')
+    def tr_detail(id):
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(TRANSACTION_SQL, (id,))
+                transaction = cur.fetchone()
+
+                cur.execute(HISTORY_SQL, (id,))
+                history = cur.fetchall()
+
+                cur.execute(SUMMARY_SQL, (id,))
+                summary = cur.fetchall()
+
+        if not transaction:
+            abort(404)
+
+        return render_template('tr_detail.html',
+                               transaction=transaction,
+                               history=history,
+                               summary=summary)
+
+    # ------------------------------------------------------------------------
     # List
     # ------------------------------------------------------------------------
 
-    @app.route('/transactions/all')
-    def tr_list_all():
-        return tr_list_year(0)
-
-    @app.route('/transactions/now')
-    def tr_list_now():
-        year = datetime.datetime.now().year
-        return tr_list_year(year)
-
     TRANSACTIONS_SQL = '''
-    SELECT tr.id, date, debit_id, da.name AS debit, credit_id, ca.name AS credit, amount, note, start, end
-    FROM transactions AS tr
-    LEFT JOIN accounts AS da ON tr.debit_id = da.id
-    LEFT JOIN accounts AS ca ON tr.credit_id = ca.id
-    {}
-    ORDER BY date DESC, tr.id DESC
+    SELECT *
+    FROM transactions_view
+    ORDER BY date DESC, transaction_id DESC
+    OFFSET %s
+    LIMIT %s
     '''
 
-    YEARS_SQL = '''
-    SELECT strftime('%Y', date) AS year
-    FROM transactions
-    GROUP BY year
-    ORDER BY year DESC
-    '''
+    @app.route('/transactions/', defaults={'page': 1})
+    @app.route('/transactions/page/<int:page>')
+    def tr_list(page):
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute('SELECT COUNT(*) FROM transactions_view')
+                count = cur.fetchone()['count']
 
-    @app.route('/transactions/<int:param_year>')
-    def tr_list_year(param_year):
-        db = get_db()
+                cur.execute(TRANSACTIONS_SQL, ((page-1) * PER_PAGE, PER_PAGE))
+                transactions = cur.fetchall()
 
-        where_strs = []
-        where_params = []
+        if not transactions and page != 1:
+            abort(404)
 
-        if param_year != 0:
-            where_strs.append("strftime('%Y', date) = ?")
-            where_params.append(str(param_year))
+        pagination = Pagination(page, PER_PAGE, count)
 
-        account = request.args.get('account')
-
-        if account:
-            where_strs.append('(debit_id = ? OR credit_id = ?)')
-            where_params.extend([account, account])
-
-        if len(where_strs) == 0:
-            sql = TRANSACTIONS_SQL.format('')
-            transactions = db.execute(sql).fetchall()
-        else:
-            where = 'WHERE ' + ' AND '.join(where_strs)
-            sql = TRANSACTIONS_SQL.format(where)
-            transactions = db.execute(sql, where_params).fetchall()
-
-        years = [int(d['year']) for d in db.execute(YEARS_SQL).fetchall()]
-
-        return render_template('tr_list.html', transactions=transactions, years=years, year=param_year)
+        return render_template('tr_list.html',
+                               pagination=pagination,
+                               transactions=transactions)
 
     # ------------------------------------------------------------------------
     # Create, Update
@@ -75,86 +102,89 @@ def use_transactions(app):
         return tr_update(None)
 
     ACCOUNTS_SQL = '''
-    SELECT id, type, name
+    SELECT account_id, account_type, name
     FROM accounts
-    ORDER BY type, id
+    ORDER BY account_type, account_id
     '''
 
-    @app.route('/transactions/update/<transaction_id>', methods=['GET', 'POST'])
+    @app.route('/transactions/update/<int:transaction_id>',
+               methods=['GET', 'POST'])
     def tr_update(transaction_id):
-        db = get_db()
-
         if request.method == 'POST':
             transaction = Transaction(form=request.form)
 
             if transaction.validate():
                 save(transaction)
-                return redirect(request.args.get('next', '/transactions/now'))
+                return redirect(request.args.get('next', '/transactions'))
         else:  # request.method == 'GET'
             if transaction_id is not None:
                 transaction = get_tr(transaction_id)
             else:
                 transaction = Transaction()
 
-        accounts = db.execute(ACCOUNTS_SQL).fetchall()
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(ACCOUNTS_SQL)
+                accounts = cur.fetchall()
 
-        return render_template('tr_edit.html', accounts=accounts, transaction=transaction)
+        return render_template('tr_edit.html',
+                               accounts=accounts,
+                               transaction=transaction)
 
     UPDATE_TRANSACTION_SQL = '''
     UPDATE transactions
-    SET date = ?, debit_id = ?, credit_id = ?, amount = ?, note = ?, start = ?, end = ?
-    WHERE id = ?
+    SET date = %s, debit_id = %s, credit_id = %s, amount = %s,
+        description = %s, start_month = %s, end_month = %s
+    WHERE transaction_id = %s
     '''
 
     INSERT_TRANSACTION_SQL = '''
-    INSERT INTO transactions(date, debit_id, credit_id, amount, note, start, end)
-    VALUES(?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO transactions(date, debit_id, credit_id, amount,
+                             description, start_month, end_month)
+    VALUES(%s, %s, %s, %s, %s, %s, %s)
     '''
 
     def save(transaction):
-        db = get_db()
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                d = transaction
 
-        d = transaction
-
-        if d.id:
-            db.execute(UPDATE_TRANSACTION_SQL, (d.date, d.debit_id, d.credit_id, d.amount, d.note, d.start, d.end, d.id))
-        else:
-            db.execute(INSERT_TRANSACTION_SQL, (d.date, d.debit_id, d.credit_id, d.amount, d.note, d.start, d.end))
-
-        db.commit()
-
-    TRANSACTION_SQL = '''
-    SELECT tr.id, date, debit_id, da.name AS debit, credit_id, ca.name AS credit, amount, note, start, end
-    FROM transactions AS tr
-    LEFT JOIN accounts AS da ON tr.debit_id = da.id
-    LEFT JOIN accounts AS ca ON tr.credit_id = ca.id
-    WHERE tr.id = ?
-    '''
+                if d.transaction_id:
+                    cur.execute(UPDATE_TRANSACTION_SQL,
+                                (d.date, d.debit_id, d.credit_id, d.amount,
+                                 d.description, d.start_month, d.end_month,
+                                 d.transaction_id))
+                else:
+                    cur.execute(INSERT_TRANSACTION_SQL,
+                                (d.date, d.debit_id, d.credit_id, d.amount,
+                                 d.description, d.start_month, d.end_month))
 
     def get_tr(transaction_id):
-        db = get_db()
-        data = db.execute(TRANSACTION_SQL, (transaction_id,)).fetchone()
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(TRANSACTION_SQL, (transaction_id,))
+                data = cur.fetchone()
+
         return Transaction(data=data)
 
     # ------------------------------------------------------------------------
     # Delete
     # ------------------------------------------------------------------------
 
-    @app.route('/transactions/confirm_delete/<transaction_id>')
+    @app.route('/transactions/confirm_delete/<int:transaction_id>')
     def tr_confirm_delete(transaction_id):
         transaction = get_tr(transaction_id)
         return render_template('tr_delete.html', transaction=transaction)
 
     DELETE_TRANSACTION_SQL = '''
     DELETE FROM transactions
-    WHERE id = ?
+    WHERE transaction_id = %s
     '''
 
-    @app.route('/transactions/delete/<transaction_id>')
+    @app.route('/transactions/delete/<int:transaction_id>')
     def tr_delete(transaction_id):
-        db = get_db()
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(DELETE_TRANSACTION_SQL, (transaction_id,))
 
-        db.execute(DELETE_TRANSACTION_SQL, (transaction_id,))
-        db.commit()
-
-        return redirect(request.args.get('next', '/transactions/now'))
+        return redirect(request.args.get('next', '/transactions'))

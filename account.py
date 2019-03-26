@@ -1,52 +1,53 @@
-TYPE_ASSETS = 1  # 資産
-TYPE_LIABILITIES = 2  # 負債
-TYPE_INCOME = 3  # 収入
-TYPE_EXPENSE = 4  # 費用
-TYPE_OTHER = 5  # その他
+TYPE_ASSET = 1      # 資産
+TYPE_LIABILITY = 2  # 負債
+TYPE_INCOME = 3     # 収入
+TYPE_EXPENSE = 4    # 費用
+TYPE_OTHER = 5      # その他
 
-AVAILABLE_TYPES = (TYPE_ASSETS, TYPE_LIABILITIES, TYPE_INCOME, TYPE_EXPENSE, TYPE_OTHER)
+TYPE_NAMES = ('資産', '負債', '収入', '費用', 'その他')
+AVAILABLE_TYPES = (TYPE_ASSET, TYPE_LIABILITY,
+                   TYPE_INCOME, TYPE_EXPENSE, TYPE_OTHER)
 
-STR2TYPE = {
-    '資産': TYPE_ASSETS,
-    '負債': TYPE_LIABILITIES,
-    '収入': TYPE_INCOME,
-    '費用': TYPE_EXPENSE,
-    'その他': TYPE_OTHER,
-}
-
-TYPE2STR = {
-    str(TYPE_ASSETS): '資産',
-    str(TYPE_LIABILITIES): '負債',
-    str(TYPE_INCOME): '収入',
-    str(TYPE_EXPENSE): '費用',
-    str(TYPE_OTHER): 'その他',
-}
+STR2TYPE = {name: tp for name, tp in zip(TYPE_NAMES, AVAILABLE_TYPES)}
+TYPE2STR = {str(tp): name for name, tp in zip(TYPE_NAMES, AVAILABLE_TYPES)}
 
 
 class Account:
     def __init__(self, data=None, form=None):
         if form:
-            self.id = form.get('id')
-            self.type = form.get('type')
+            self.account_id = form.get('account_id')
+            self.account_type = form.get('account_type')
             self.name = form.get('name')
 
             self.clean()
         elif data:
-            self.id = data['id']
-            self.type = data['type']
+            self.account_id = data['account_id']
+            self.account_type = data['account_type']
             self.name = data['name']
         else:
-            self.id = None
-            self.type = None
+            self.account_id = None
+            self.account_type = None
             self.name = ''
 
+        if self.account_type == TYPE_ASSET:
+            self.account_type_name = '資産'
+        elif self.account_type == TYPE_LIABILITY:
+            self.account_type_name = '負債'
+        elif self.account_type == TYPE_INCOME:
+            self.account_type_name = '収入'
+        elif self.account_type == TYPE_EXPENSE:
+            self.account_type_name = '費用'
+        else:
+            self.account_type_name = 'Unknown'
+
     def clean(self):
-        self.id = conv_int(self.id, None)
-        self.type = conv_int(self.type, None)
+        self.account_id = conv_int(self.account_id, None)
+        self.account_type = conv_int(self.account_type, None)
 
     def validate(self):
-        if self.type not in AVAILABLE_TYPES:
-            self.error_msg = "'type' は {} のいずれかじゃないとダメ: value = {}".format(AVAILABLE_TYPES, self.type)
+        if self.account_type not in AVAILABLE_TYPES:
+            self.error_msg = "'type' は {} のいずれかじゃないとダメ: value = {}" \
+                             .format(AVAILABLE_TYPES, self.account_type)
             return False
 
         return True
@@ -55,5 +56,5 @@ class Account:
 def conv_int(s, default_value):
     try:
         return int(s)
-    except:
+    except (TypeError, ValueError):
         return default_value

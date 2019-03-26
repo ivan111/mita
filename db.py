@@ -1,19 +1,11 @@
-import os
-import sqlite3
+import psycopg2
 
-from flask import g
-
-DATABASE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'db.sqlite3')
+from flask import current_app, g
 
 
-def get_db():
+def connect():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            DATABASE,
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-
-        g.db.row_factory = sqlite3.Row
+        g.db = psycopg2.connect('dbname=mita')
 
     return g.db
 
@@ -23,3 +15,7 @@ def close_db(e=None):
 
     if db is not None:
         db.close()
+
+
+def use_db(app):
+    app.teardown_appcontext(close_db)

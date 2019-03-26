@@ -2,17 +2,18 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>{% block title %}{% endblock %} - 家計簿</title>
+<title>{% block title %}{% endblock %} - mita2</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
 <div style="margin-bottom: 1em;">
-<a href="/transactions/now">取引</a>　|　
-<a href="/balance">残高</a>　|　
-<a href="/chart">グラフ</a>　|　
-<a href="/accounts">勘定科目</a>
+<a href="/">dashboard</a>　|　
+<a href="/transactions">transactions</a>　|　
+<a href="/chart">chart</a>　|　
+<a href="/accounts">accounts</a>　|　
+<a href="/history">history</a>
 </div>
 
 {% block body %}

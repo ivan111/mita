@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% import 'transactions.html' as tr %}
+
+{% block title %}account{% endblock %}
+
+{% block body %}
+
+<h2>勘定科目 : {{ account.name }}</h2>
+
+<table>
+    <tr><th>month</th><th>accrual debit </th><th>accrual credit </th><th>cash debit </th><th>cash credit </th></tr>
+    {% for d in summary %}
+    <tr>
+        <td>{{ d.month }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.accrual_debit_amount) }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.accrual_credit_amount) }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.cash_debit_amount) }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.cash_credit_amount) }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>transactions</h3>
+
+{{ tr.render_transactions(transactions) }}
+
+{% endblock %}

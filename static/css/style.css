@@ -35,10 +35,15 @@ th, td {
     padding: 0.2em 1em;
 }
 
+div.pagination {
+    margin-top: 1em;
+}
+
 .axis text {
     font-size: 12px;
 }
 
-.bar rect {
-    cursor: pointer;
+.tick line {
+    stroke: gray;
+    stroke-width: 1;
 }

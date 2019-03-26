@@ -1,6 +1,60 @@
 {% extends "base.html" %}
 
-{% block title %}家計簿{% endblock %}
+{% import 'transactions.html' as tr %}
+
+{% block title %}dashboard{% endblock %}
 
 {% block body %}
+
+<svg class="line-chart"></svg>
+
+<svg class="stack"></svg>
+
+<p>
+    <a href="/transactions/create?next={{ request.full_path | urlencode }}">create</a>
+</p>
+
+{{ tr.render_transactions(transactions) }}
+
+<table style="margin-top: 2em;">
+    <tr>
+        <th>資産</th><th>負債</th><th>純資産</th>
+    </tr>
+    <tr>
+        <td style="text-align: right;">{{ "{0:,}".format(asset_sum) }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(liability_sum) }}</td>
+        <td style="text-align: right;">{{ "{0:,}".format(asset_sum - liability_sum) }}</td>
+    </tr>
+</table>
+
+{% for balances in [asset_list, liability_list] %}
+<table style="margin-top: 2em;">
+    {% for sub_balances in balances | batch(8) %}
+    <tr>
+        {% for d in sub_balances %}
+        <th>{{ d.name }}</th>
+        {% endfor %}
+    </tr>
+    <tr>
+        {% for d in sub_balances %}
+        <td style="text-align: right;">{{ "{0:,}".format(d.balance) }}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+{% endfor %}
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="{{ url_for('static', filename='js/line.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bar.js') }}"></script>
+
+<script>
+var dt = new Date();
+var endMonth = dt.getFullYear() * 100 + dt.getMonth() + 1;
+dt.setMonth(dt.getMonth() - 2);
+var startMonth = dt.getFullYear() * 100 + dt.getMonth() + 1;
+
+drawBarChart('svg.stack', startMonth, endMonth, 3);
+</script>
+
 {% endblock %}

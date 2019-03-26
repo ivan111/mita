@@ -1,6 +1,8 @@
-from flask import render_template, request, redirect, g
+from flask import render_template, request, redirect
+from psycopg2.extras import RealDictCursor
+import datetime
 
-from db import get_db
+import db
 from account import Account, TYPE2STR
 
 
@@ -18,20 +20,66 @@ def use_accounts(app):
         return name
 
     # ------------------------------------------------------------------------
+    # Detail
+    # ------------------------------------------------------------------------
+
+    TRANSACTIONS_SQL = '''
+    SELECT *
+    FROM transactions_view
+    WHERE debit_id = %s OR credit_id = %s
+    ORDER BY date DESC
+    LIMIT 20
+    '''
+
+    SUMMARY_SQL = '''
+    SELECT month,
+           SUM(accrual_debit_amount) as accrual_debit_amount,
+           SUM(accrual_credit_amount) as accrual_credit_amount,
+           SUM(cash_debit_amount) as cash_debit_amount,
+           SUM(cash_credit_amount) as cash_credit_amount
+    FROM transactions_month
+    WHERE account_id = %s AND month <= %s
+    GROUP BY account_id, month
+    ORDER BY month DESC
+    LIMIT 12
+    '''
+
+    @app.route('/accounts/<int:id>')
+    def ac_detail(id):
+        account = get_ac(id)
+
+        now = datetime.datetime.now()
+        month = now.year * 100 + now.month
+
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(TRANSACTIONS_SQL, (id, id))
+                transactions = cur.fetchall()
+
+                cur.execute(SUMMARY_SQL, (id, month))
+                summary = cur.fetchall()
+
+        return render_template('ac_detail.html',
+                               account=account,
+                               transactions=transactions,
+                               summary=summary)
+
+    # ------------------------------------------------------------------------
     # List
     # ------------------------------------------------------------------------
 
     ACCOUNTS_SQL = '''
-    SELECT id, type, name
+    SELECT account_id, account_type, name
     FROM accounts
-    ORDER BY type, id
+    ORDER BY account_type, account_id
     '''
 
     @app.route('/accounts')
-    def ac_list_all():
-        db = get_db()
-
-        accounts = db.execute(ACCOUNTS_SQL).fetchall()
+    def ac_list():
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(ACCOUNTS_SQL)
+                accounts = cur.fetchall()
 
         return render_template('ac_list.html', accounts=accounts)
 
@@ -43,10 +91,8 @@ def use_accounts(app):
     def ac_create():
         return ac_update(None)
 
-    @app.route('/accounts/update/<account_id>', methods=['GET', 'POST'])
+    @app.route('/accounts/update/<int:account_id>', methods=['GET', 'POST'])
     def ac_update(account_id):
-        db = get_db()
-
         if request.method == 'POST':
             account = Account(form=request.form)
 
@@ -63,36 +109,37 @@ def use_accounts(app):
 
     UPDATE_ACCOUNT_SQL = '''
     UPDATE accounts
-    SET type = ?, name = ?
-    WHERE id = ?
+    SET name = %s
+    WHERE account_id = %s
     '''
 
     INSERT_ACCOUNT_SQL = '''
-    INSERT INTO accounts(type, name)
-    VALUES(?, ?)
+    INSERT INTO accounts(account_type, name)
+    VALUES(%s, %s)
     '''
 
     def save(account):
-        db = get_db()
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                d = account
 
-        d = account
-
-        if d.id:
-            db.execute(UPDATE_ACCOUNT_SQL, (d.type, d.name, d.id))
-        else:
-            db.execute(INSERT_ACCOUNT_SQL, (d.type, d.name))
-
-        db.commit()
+                if d.account_id:
+                    cur.execute(UPDATE_ACCOUNT_SQL, (d.name, d.account_id))
+                else:
+                    cur.execute(INSERT_ACCOUNT_SQL, (d.account_type, d.name))
 
     ACCOUNT_SQL = '''
-    SELECT id, type, name
+    SELECT account_id, account_type, name
     FROM accounts
-    WHERE id = ?
+    WHERE account_id = %s
     '''
 
     def get_ac(account_id):
-        db = get_db()
-        data = db.execute(ACCOUNT_SQL, (account_id,)).fetchone()
+        with db.connect() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(ACCOUNT_SQL, (account_id,))
+                data = cur.fetchone()
+
         return Account(data=data)
 
     # ------------------------------------------------------------------------
@@ -102,29 +149,31 @@ def use_accounts(app):
     REF_SQL = '''
     SELECT count(*)
     FROM transactions
-    WHERE debit_id = ? OR credit_id = ?
+    WHERE debit_id = %s OR credit_id = %s
     '''
 
-    @app.route('/accounts/confirm_delete/<account_id>')
+    @app.route('/accounts/confirm_delete/<int:account_id>')
     def ac_confirm_delete(account_id):
-        db = get_db()
-
         account = get_ac(account_id)
 
-        ref_count = db.execute(REF_SQL, (account_id, account_id)).fetchone()[0]
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(REF_SQL, (account_id, account_id))
+                ref_count = cur.fetchone()[0]
 
-        return render_template('ac_delete.html', account=account, ref_count=ref_count)
+        return render_template('ac_delete.html',
+                               account=account,
+                               ref_count=ref_count)
 
     DELETE_ACCOUNT_SQL = '''
     DELETE FROM accounts
-    WHERE id = ?
+    WHERE account_id = %s
     '''
 
-    @app.route('/accounts/delete/<account_id>')
+    @app.route('/accounts/delete/<int:account_id>')
     def ac_delete(account_id):
-        db = get_db()
-
-        db.execute(DELETE_ACCOUNT_SQL, (account_id,))
-        db.commit()
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(DELETE_ACCOUNT_SQL, (account_id,))
 
         return redirect('/accounts')

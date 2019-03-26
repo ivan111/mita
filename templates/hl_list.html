@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% import 'pagination.html' as pg %}
+{% import 'history.html' as hl %}
+
+{% block title %}list history{% endblock %}
+
+{% block body %}
+
+{{ hl.render_history(history) }}
+
+{{ pg.render_pagination(pagination) }}
+
+{% endblock %}

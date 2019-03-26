@@ -1,68 +1,30 @@
 {% extends "base.html" %}
 
-{# DEFAULT_MAX_AMOUNT が 0 のときは Auto #}
-{% set DEFAULT_MAX_AMOUNT = 100000 %}
-
-{% block title %}グラフ{% endblock %}
+{% block title %}chart{% endblock %}
 
 {% block body %}
 
 <p>
-<form>
-    <input type="radio" name="bspl" value="pl" id="pl" onchange="setPL();" checked><label for="pl">収入／支出</label>
-    <input type="radio" name="bspl" value="income" id="income" onchange="setIncome();"><label for="income">収入</label>
-    <input type="radio" name="bspl" value="expense" id="expense" onchange="setExpense();"><label for="expense">費用</label>
-
-    　<input type="radio" name="bspl" value="bs" id="bs" onchange="setBS();"><label for="bs">資産／負債</label>
-    <input type="radio" name="bspl" value="assets" id="assets" onchange="setAssets();"><label for="assets">資産</label>
-    <input type="radio" name="bspl" value="liabilities" id="liabilities" onchange="setLiabilities();"><label for="liabilities">負債</label>
-
-    <br />
-    集計 : 
-    <input type="radio" name="ym" value="monthly" id="monthly" onchange="setMonthly();" checked><label for="monthly">月</label>
-    <input type="radio" name="ym" value="yearly" id="yearly" onchange="setYearly();"><label for="yearly">年</label>
-
-    <br />
-    X軸最大値 : 
-    <input type="radio" name="maxAmount" id="auto-max-amount" value="0" onchange="setAutoMaxAmount();" {% if DEFAULT_MAX_AMOUNT == 0 %}checked{% endif %}><label for="auto-max-amount">Auto</label>
-    {% for i in range(10) %}
-    {% set val = 100000 * 2 ** i %}
-    <input type="radio" name="maxAmount" id="max-amount-{{ i }}" value="{{ val }}"
-        onchange="changeMaxAmount({{ val }});" {% if val == DEFAULT_MAX_AMOUNT %}checked{% endif %}>
-    <label for="max-amount-{{ i }}">{{ '{0:,}'.format(val // 10000) }} 万</label>
-    {% endfor %}
-
-    <br />
-    <input type="button" value="勘定科目フィルタを解除" onclick="unsetAccountFilter();">
-
-    <input id="msg" type="text" name="account" value="マウスカーソルをバーの下へ" size="40" readonly>
-</form>
+{% for y in years %}
+{% if y == year %}
+{{ y }} 
+{% else %}
+<a href="/chart/year/{{ y }}">{{ y }}</a> 
+{% endif %}
+{% endfor %}
 </p>
 
-<div id="chart"></div>
-
-<h4>カスタマイズしたい場合</h4>
-<ul>
-    <li>グラフの幅を変更 : static/js/stacked-chart.js の WIDTH 変数の値を変更</li>
-    <li>グラフの高さを変更 : static/js/stacked-chart.js の ROW_HEIGHT 変数の値を変更</li>
-    <li>グラフの表示行数を変更 : static/js/stacked-chart.js の ROWS_NUM 変数の値を変更</li>
-    <li>デフォルト X 軸最大値の変更 : templates/chart.html の {{ '{' }}% set DEFAULT_MAX_AMOUNT = 100000 %{{ '}' }} の値を変更。0 は Auto</li>
-    <li>行の間隔を変更 : static/js/stacked-chart.js の yScale 変数の padding の値を変更</li>
-    <li>バーの色を変更 : static/js/chart.js の setColor 関数を変更</li>
-    <li>この説明自体を削除 : templates/chart.html から削除またはコメントアウト</li>
-    <li>その他：static/js/stacked-chart.js, static/js/chart.js, templates/chart.html, chart_views.py 等を変更</li>
-</ul>
-
-<h4>処理概要</h4>
-<p>chart_views.py で月集計データ(tsv 形式)を作って、templates/chart.html をテンプレートとして表示している。グラフは D3.js ライブラリを使っていて、static/js/stacked-chart.js で主にグラフ処理をしている。static/js/chart.js はグラフとhtmlのつなぎ役。</p>
-
-<script>
-var DEFAULT_MAX_AMOUNT = {{ DEFAULT_MAX_AMOUNT }};
-</script>
+<svg class="stack"></svg>
 
 <script src="https://d3js.org/d3.v5.min.js"></script>
-{# <script src="{{ url_for('static', filename='js/d3.v5.min.js') }}"></script> #}
-<script src="{{ url_for('static', filename='js/stacked-chart.js') }}"></script>
-<script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bar.js') }}"></script>
+
+<script>
+var dt = new Date();
+var startMonth = {{ year }} * 100 + 1;
+var endMonth = {{ year }} * 100 + 12;
+
+drawBarChart('svg.stack', startMonth, endMonth, 12);
+</script>
 
 {% endblock %}
