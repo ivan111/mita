@@ -111,14 +111,14 @@ CREATE TABLE transactions_summary (
  * 収支ビュー
  */
 CREATE OR REPLACE VIEW bp_view AS
-SELECT ts.account_id, ac.name, ts.month,
+SELECT ts.month,
        SUM(CASE WHEN ac.account_type = 3 THEN accrual_credit_amount - accrual_debit_amount ELSE 0 END)
        -
        SUM(CASE WHEN ac.account_type = 4 THEN accrual_debit_amount - accrual_credit_amount ELSE 0 END)
        AS balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-GROUP BY ts.account_id, ac.name, ts.month;
+GROUP BY ts.month;
 
 
 /*

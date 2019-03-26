@@ -66,13 +66,13 @@ drawBarChart = function (svgSelection, startMonth, endMonth, numMonths) {
 d3.json('/api/summary/' + startMonth + '/' + endMonth).then(function(data) {
     var height = (barHeight * 2 + 10) * numMonths;
 
-    var expenceStacked = getStacked(data.expence_keys, data.expence);
-    var maxExpenceX = getMaxX(expenceStacked);
+    var expenseStacked = getStacked(data.expense_keys, data.expense);
+    var maxexpenseX = getMaxX(expenseStacked);
 
     var incomeStacked = getStacked(data.income_keys, data.income);
     var maxIncomeX = getMaxX(incomeStacked);
 
-    var maxX = Math.max(maxExpenceX, maxIncomeX);
+    var maxX = Math.max(maxexpenseX, maxIncomeX);
 
     var x = d3.scaleLinear()
         .domain([0, maxX])
@@ -80,7 +80,7 @@ d3.json('/api/summary/' + startMonth + '/' + endMonth).then(function(data) {
 
     var y = d3.scaleBand()
         .padding(0.1)
-        .domain(data.expence.map(function(d) { return d.month; }))
+        .domain(data.expense.map(function(d) { return d.month; }))
         .range([0, height]);
 
     var svg = d3.select(svgSelection)
@@ -101,11 +101,11 @@ d3.json('/api/summary/' + startMonth + '/' + endMonth).then(function(data) {
         .attr('class', 'y axis')
         .call(yAxis);
 
-    var expenceColor = d3.scaleOrdinal(d3.schemeSet3);
+    var expenseColor = d3.scaleOrdinal(d3.schemeSet3);
     var incomeColor = d3.scaleOrdinal(d3.schemePastel1);
 
-    data.expence_keys.forEach(function (d) {
-        expenceColor(d);
+    data.expense_keys.forEach(function (d) {
+        expenseColor(d);
     });
 
     data.income_keys.forEach(function (d) {
@@ -113,7 +113,7 @@ d3.json('/api/summary/' + startMonth + '/' + endMonth).then(function(data) {
     });
 
     enterLayer(svg, x, y, incomeStacked, 'incomeLayers', incomeColor, 0);
-    enterLayer(svg, x, y, expenceStacked, 'expenceLayers', expenceColor, barHeight);
+    enterLayer(svg, x, y, expenseStacked, 'expenseLayers', expenseColor, barHeight);
 });
 };
 

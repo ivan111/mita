@@ -9,7 +9,7 @@ var end_month = dt.getFullYear() * 100 + dt.getMonth() + 1;
 dt.setMonth(dt.getMonth() - 12);
 var start_month = dt.getFullYear() * 100 + dt.getMonth() + 1;
 
-d3.json('api/bp/' + start_month + '/' + end_month).then(function(data) {
+d3.json('/api/bp/' + start_month + '/' + end_month).then(function(data) {
     var parseMonth = d3.timeParse('%Y%m');
 
     data.forEach(function(d) {
