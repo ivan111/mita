@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% import 'pagination.html' as pg %}
 {% import 'transactions.html' as tr %}
 
 {% block title %}account{% endblock %}
@@ -24,5 +25,7 @@
 <h3>transactions</h3>
 
 {{ tr.render_transactions(transactions) }}
+
+{{ pg.render_pagination(pagination) }}
 
 {% endblock %}

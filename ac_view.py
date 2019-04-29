@@ -4,6 +4,9 @@ import datetime
 
 import db
 from account import Account, TYPE2STR
+from pagination import Pagination
+
+PER_PAGE = 20
 
 
 def use_accounts(app):
@@ -23,12 +26,19 @@ def use_accounts(app):
     # Detail
     # ------------------------------------------------------------------------
 
+    COUNT_SQL = '''
+    SELECT COUNT(*)
+    FROM transactions_view
+    WHERE debit_id = %s OR credit_id = %s
+    '''
+
     TRANSACTIONS_SQL = '''
     SELECT *
     FROM transactions_view
     WHERE debit_id = %s OR credit_id = %s
     ORDER BY date DESC
-    LIMIT 20
+    OFFSET %s
+    LIMIT %s
     '''
 
     SUMMARY_SQL = '''
@@ -43,9 +53,9 @@ def use_accounts(app):
     ORDER BY month DESC
     LIMIT 12
     '''
-
-    @app.route('/accounts/<int:id>')
-    def ac_detail(id):
+    @app.route('/accounts/<int:id>', defaults={'page': 1})
+    @app.route('/accounts/<int:id>/page/<int:page>')
+    def ac_detail(id, page):
         account = get_ac(id)
 
         now = datetime.datetime.now()
@@ -53,13 +63,22 @@ def use_accounts(app):
 
         with db.connect() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute(TRANSACTIONS_SQL, (id, id))
+                cur.execute(COUNT_SQL, (id, id))
+                count = cur.fetchone()['count']
+
+                cur.execute(TRANSACTIONS_SQL, (id, id, (page-1) * PER_PAGE, PER_PAGE))
                 transactions = cur.fetchall()
 
                 cur.execute(SUMMARY_SQL, (id, month))
                 summary = cur.fetchall()
 
+        if not transactions and page != 1:
+            abort(404)
+
+        pagination = Pagination(page, PER_PAGE, count)
+
         return render_template('ac_detail.html',
+                               pagination=pagination,
                                account=account,
                                transactions=transactions,
                                summary=summary)
