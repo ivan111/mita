@@ -14,7 +14,7 @@
     <tr>
         <td><a href="/accounts/confirm_delete/{{ d.account_id }}">delete</a></td>
         <td>{{ d.account_type | ac_type2name }}</td>
-        <td>{{ d.name }}</td>
+        <td><a href="/accounts/{{ d.account_id }}">{{ d.name }}</a></td>
         <td><a href="/accounts/update/{{ d.account_id }}">update</a></td>
     </tr>
     {% endfor %}
