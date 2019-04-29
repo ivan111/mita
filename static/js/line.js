@@ -6,6 +6,7 @@ var HEIGHT = 200 - MARGIN.TOP - MARGIN.BOTTOM;
 
 var dt = new Date();
 var end_month = dt.getFullYear() * 100 + dt.getMonth() + 1;
+dt.setDate(1);
 dt.setMonth(dt.getMonth() - 12);
 var start_month = dt.getFullYear() * 100 + dt.getMonth() + 1;
 
