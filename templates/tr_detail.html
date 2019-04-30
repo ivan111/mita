@@ -13,6 +13,34 @@
 
 {{ hl.render_history(history) }}
 
+<h3>relations</h3>
+
+<p>sum: {{ "{0:,}".format(relations_sum) }}</p>
+
+<p>
+<form method="post" action="/relations/create/{{ transaction.transaction_id }}">
+    <label for="id_related">id:</label>
+    <input type="text" name="related_transaction_id" required id="id_related" value="" />
+
+    <input type="submit" value="add">
+</form>
+</p>
+
+<table>
+    <tr><th>id</th><th>date</th><th>debit</th><th>amount</th><th>credit</th><th>description</th><th>delete</th></tr>
+    {% for d in relations %}
+    <tr>
+        <td><a href="/transactions/{{ d.related_transaction_id }}">{{ d.related_transaction_id }}</a></td>
+        <td>{{ d.date }}</td>
+        <td><a href="/accounts/{{ d.debit_id }}">{{ d.debit }}</a></td>
+        <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
+        <td><a href="/accounts/{{ d.credit_id }}">{{ d.credit }}</a></td>
+        <td>{{ d.description }}</td>
+        <td><a href="/relations/delete/{{ d.transaction_id }}/{{ d.related_transaction_id }}">delete</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
 <h3>debug</h3>
 
 <table>

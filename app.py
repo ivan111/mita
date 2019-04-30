@@ -8,6 +8,7 @@ from tr_view import use_transactions
 from chart_view import use_chart
 from ac_view import use_accounts
 from hl_view import use_history
+from relations import use_relations
 from api import use_api
 from jinja import use_jinja
 
@@ -20,5 +21,6 @@ use_transactions(app)
 use_chart(app)
 use_accounts(app)
 use_history(app)
+use_relations(app)
 use_api(app)
 use_jinja(app)

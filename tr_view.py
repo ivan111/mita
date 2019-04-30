@@ -27,6 +27,14 @@ def use_transactions(app):
     ORDER BY operate_time DESC
     '''
 
+    RELATIONS_SQL = '''
+    SELECT *
+    FROM transactions_view AS tr
+         LEFT JOIN relations AS rel ON tr.transaction_id = rel.related_transaction_id
+    WHERE rel.transaction_id = %s
+    ORDER BY tr.date DESC, tr.transaction_id DESC
+    '''
+
     SUMMARY_SQL = '''
     SELECT ac.name, tm.month,
            SUM(accrual_debit_amount) as accrual_debit_amount,
@@ -50,15 +58,25 @@ def use_transactions(app):
                 cur.execute(HISTORY_SQL, (id,))
                 history = cur.fetchall()
 
+                cur.execute(RELATIONS_SQL, (id,))
+                relations = cur.fetchall()
+
                 cur.execute(SUMMARY_SQL, (id,))
                 summary = cur.fetchall()
 
         if not transaction:
             abort(404)
 
+        relations_sum = 0
+
+        for d in relations:
+            relations_sum += d['amount']
+
         return render_template('tr_detail.html',
                                transaction=transaction,
                                history=history,
+                               relations=relations,
+                               relations_sum=relations_sum,
                                summary=summary)
 
     # ------------------------------------------------------------------------

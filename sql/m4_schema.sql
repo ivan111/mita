@@ -114,6 +114,17 @@ CREATE TABLE transactions_summary (
 
 
 /*
+ * 関連テーブル
+ */
+CREATE TABLE relations (
+    transaction_id integer NOT NULL REFERENCES transactions (transaction_id),
+    related_transaction_id integer NOT NULL REFERENCES transactions (transaction_id),
+
+    PRIMARY KEY (transaction_id, related_transaction_id)
+);
+
+
+/*
  * 収支ビュー
  */
 CREATE OR REPLACE VIEW bp_view AS
