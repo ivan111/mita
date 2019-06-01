@@ -52,10 +52,10 @@
 var dt = new Date();
 var endMonth = dt.getFullYear() * 100 + dt.getMonth() + 1;
 dt.setDate(1);
-dt.setMonth(dt.getMonth() - 2);
+dt.setMonth(dt.getMonth() - 5);
 var startMonth = dt.getFullYear() * 100 + dt.getMonth() + 1;
 
-drawBarChart('svg.stack', startMonth, endMonth, 3);
+drawBarChart('svg.stack', startMonth, endMonth, 6);
 </script>
 
 {% endblock %}
