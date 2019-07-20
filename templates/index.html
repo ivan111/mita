@@ -6,9 +6,13 @@
 
 {% block body %}
 
+<div>
 <svg class="line-chart"></svg>
+</div>
 
+<div>
 <svg class="stack"></svg>
+</div>
 
 <p>
     <a href="/transactions/create?next={{ request.full_path | urlencode }}">create</a>
