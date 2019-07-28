@@ -63,12 +63,12 @@ CREATE TABLE transactions_history (
 
 
 /*
- * 月ごとの集計を用意にするための作業用テーブル
+ * 月ごとの集計を容易にするための作業用テーブル
  *
  * transactions テーブルを変更すると、
  * トリガーによりこのテーブルも自動的に更新される。
  * 直接 transactions_summary テーブルを作ることもできるが、
- * 開発とデバッグを用意にするために、この中間テーブルを作った。
+ * 開発とデバッグを容易にするために、この中間テーブルを作った。
  */
 CREATE TABLE transactions_month (
     tm_id SERIAL,

@@ -43,16 +43,18 @@ def use_accounts(app):
 
     SUMMARY_SQL = '''
     SELECT month,
-           SUM(accrual_debit_amount) as accrual_debit_amount,
-           SUM(accrual_credit_amount) as accrual_credit_amount,
-           SUM(cash_debit_amount) as cash_debit_amount,
-           SUM(cash_credit_amount) as cash_credit_amount
-    FROM transactions_month
+           accrual_debit_amount,
+           accrual_credit_amount,
+           accrual_accum_diff,
+           cash_debit_amount,
+           cash_credit_amount,
+           cash_accum_diff
+    FROM transactions_summary
     WHERE account_id = %s AND month <= %s
-    GROUP BY account_id, month
     ORDER BY month DESC
     LIMIT 12
     '''
+
     @app.route('/accounts/<int:id>', defaults={'page': 1})
     @app.route('/accounts/<int:id>/page/<int:page>')
     def ac_detail(id, page):
