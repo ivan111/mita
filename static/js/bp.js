@@ -5,7 +5,7 @@ var NUM_MONTHS = 60;
 var BAR_WIDTH = 12;
 var MARGIN = { TOP: 50, RIGHT: 10, BOTTOM: 10, LEFT: 80 };
 var WIDTH = (BAR_WIDTH + 4) * NUM_MONTHS - MARGIN.LEFT - MARGIN.RIGHT;
-var HEIGHT = 200 - MARGIN.TOP - MARGIN.BOTTOM;
+var HEIGHT = 300 - MARGIN.TOP - MARGIN.BOTTOM;
 
 var dt = new Date();
 var end_month = dt.getFullYear() * 100 + dt.getMonth() + 1;
@@ -21,7 +21,11 @@ d3.json('/api/bp/' + start_month + '/' + end_month).then(function(data) {
     });
 
     var balances = data.map(function(d) { return d.balance; });
+    balances = balances.sort(function(a, b){return a-b});
     var IQR = d3.quantile(balances, 0.75) - d3.quantile(balances, 0.25);
+    if (d3.quantile(balances, 0.75) > 0 && d3.quantile(balances, 0.25) < 0) {
+        IQR = Math.max(d3.quantile(balances, 0.75), Math.abs(d3.quantile(balances, 0.25)));
+    }
     // 外れ値
     var threshold = Math.abs(d3.quantile(balances, 0.75) + IQR) * 1.5;
 
