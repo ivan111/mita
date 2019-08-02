@@ -47,7 +47,7 @@
     <tr><th>年月</th><th>勘定科目</th><th>発生借方</th><th>発生貸方</th><th>借方</th><th>貸方</th></tr>
     {% for d in summary %}
     <tr>
-        <td>{{ d.month }}</td>
+        <td>{{ d.month | ym }}</td>
         <td>{{ d.name }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.accrual_debit_amount) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.accrual_credit_amount) }}</td>

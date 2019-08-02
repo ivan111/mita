@@ -13,7 +13,7 @@
     <tr><th>年月</th><th>借方</th><th>貸方</th><th>累積差分</th></tr>
     {% for d in summary %}
     <tr>
-        <td>{{ d.month }}</td>
+        <td>{{ d.month | ym }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_debit_amount) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_credit_amount) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_accum_diff) }}</td>
