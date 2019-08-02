@@ -174,7 +174,7 @@ WITH T AS (
     LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
     WHERE ts.month <= get_month(current_date)
 )
-SELECT ac.name, ts.balance
+SELECT ac.account_id, ac.account_type, ac.name, ts.balance
 FROM T AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
 WHERE ts.rn = 1 AND

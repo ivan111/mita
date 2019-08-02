@@ -36,7 +36,7 @@
     {% for sub_balances in balances | batch(8) %}
     <tr>
         {% for d in sub_balances %}
-        <th>{{ d.name }}</th>
+        <th><a href="/accounts/{{ d.account_id }}">{{ d.name }}</a></th>
         {% endfor %}
     </tr>
     <tr>
