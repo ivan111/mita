@@ -1,10 +1,10 @@
 {% macro render_history(history) %}
 <table>
-    <tr><th>operation</th><th>operate time</th><th>id</th><th>date</th><th>debit</th><th>amount</th><th>credit</th><th>description</th><th>start</th><th>end</th></tr>
+    <tr><th>操作</th><th>操作時刻</th><th>ID</th><th>日付</th><th>借方</th><th>金額</th><th>貸方</th><th>説明</th><th>開始</th><th>終了</th></tr>
     {% for d in history %}
     <tr>
         <td>{{ d.operation }}</td>
-        <td>{{ d.operate_time }}</td>
+        <td>{{ d.operate_time.strftime('%F %X') }}</td>
         <td><a href="/transactions/{{ d.transaction_id }}">{{ d.transaction_id }}</a></td>
         <td>{{ d.date }}</td>
         <td><a href="/accounts/{{ d.debit_id }}">{{ d.debit }}</a></td>

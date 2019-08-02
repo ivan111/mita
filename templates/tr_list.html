@@ -3,12 +3,12 @@
 {% import 'pagination.html' as pg %}
 {% import 'transactions.html' as tr %}
 
-{% block title %}list transactions{% endblock %}
+{% block title %}取引の一覧{% endblock %}
 
 {% block body %}
 
 <p>
-    <a href="/transactions/create?next={{ request.full_path | urlencode }}">create</a>
+    <a href="/transactions/create?next={{ request.full_path | urlencode }}">作成</a>
 </p>
 
 {{ tr.render_transactions(transactions) }}

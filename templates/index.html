@@ -2,7 +2,7 @@
 
 {% import 'transactions.html' as tr %}
 
-{% block title %}dashboard{% endblock %}
+{% block title %}ダッシュボード{% endblock %}
 
 {% block body %}
 
@@ -15,7 +15,7 @@
 </div>
 
 <p>
-    <a href="/transactions/create?next={{ request.full_path | urlencode }}">create</a>
+    <a href="/transactions/create?next={{ request.full_path | urlencode }}">取引の作成</a>
 </p>
 
 {{ tr.render_transactions(transactions) }}

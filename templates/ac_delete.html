@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}confirm delete account{% endblock %}
+{% block title %}勘定科目の削除の確認{% endblock %}
 
 {% block body %}
 {% if ref_count != 0 %}
@@ -10,9 +10,9 @@
 {% endif %}
 
 <table>
-    <tr>{% if ref_count == 0 %}<th>delete</th>{% endif %}<th>type</th><th>name</th></tr>
+    <tr>{% if ref_count == 0 %}<th>削除</th>{% endif %}<th>タイプ</th><th>名前</th></tr>
     <tr>
-        {% if ref_count == 0 %}<td><a href="/accounts/delete/{{ account.account_id }}">delete</a></td>{% endif %}
+        {% if ref_count == 0 %}<td><a href="/accounts/delete/{{ account.account_id }}">削除</a></td>{% endif %}
         <td>{{ account.account_type | ac_type2name }}</td>
         <td>{{ account.name }}</td>
     </tr>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{% if transaction.id %}udpate{% else %}edit{% endif %} transaction{% endblock %}
+{% block title %}取引の{% if transaction.id %}更新{% else %}作成{% endif %}{% endblock %}
 
 {% block body %}
 
@@ -13,9 +13,9 @@
     <input type='hidden' name='transaction_id' value='{{ transaction.transaction_id }}' />
 
 <table>
-    <tr><th><label for="id_date">Date:</label></th><td><input type="text" name="date" value="{{ transaction.date }}" required id="id_date" /></td></tr>
+    <tr><th><label for="id_date">日付:</label></th><td><input type="text" name="date" value="{{ transaction.date }}" required id="id_date" /></td></tr>
 
-    <tr><th><label for="id_debit">Debit:</label></th><td><select name="debit" required id="id_debit">
+    <tr><th><label for="id_debit">借方:</label></th><td><select name="debit" required id="id_debit">
         <option value="">---------</option>
         {% for account in accounts %}
         {% if account.account_id == transaction.debit_id %}
@@ -26,7 +26,7 @@
         {% endfor %}
         </td></tr>
 
-    <tr><th><label for="id_credit">Credit:</label></th><td><select name="credit" required id="id_credit">
+    <tr><th><label for="id_credit">貸方:</label></th><td><select name="credit" required id="id_credit">
         <option value="">---------</option>
         {% for account in accounts %}
         {% if account.account_id == transaction.credit_id %}
@@ -37,15 +37,15 @@
         {% endfor %}
         </td></tr>
 
-    <tr><th><label for="id_amount">Amount:</label></th><td><input type="number" name="amount" required id="id_amount" value="{{ transaction.amount }}" /></td></tr>
+    <tr><th><label for="id_amount">金額:</label></th><td><input type="number" name="amount" required id="id_amount" value="{{ transaction.amount }}" /></td></tr>
 
-    <tr><th><label for="id_description">Description:</label></th><td><input type="text" name="description" maxlength="64" id="id_description" value="{{ transaction.description }}" /></td></tr>
+    <tr><th><label for="id_description">説明:</label></th><td><input type="text" name="description" maxlength="64" id="id_description" value="{{ transaction.description }}" /></td></tr>
 
-    <tr><th><label for="id_start_month">Start Month:</label></th><td><input type="text" name="start_month" id="id_start_month" value="{{ transaction.start_month if transaction.start_month is not none }}" /> (形式: YYYYMM)</td></tr>
+    <tr><th><label for="id_start_month">開始年月:</label></th><td><input type="text" name="start_month" id="id_start_month" value="{{ transaction.start_month if transaction.start_month is not none }}" /> (形式: YYYYMM)</td></tr>
 
-    <tr><th><label for="id_end_month">End Month:</label></th><td><input type="text" name="end_month" id="id_end_month" value="{{ transaction.end_month if transaction.end_month is not none }}" /> (形式: YYYYMM)</td></tr>
+    <tr><th><label for="id_end_month">終了年月:</label></th><td><input type="text" name="end_month" id="id_end_month" value="{{ transaction.end_month if transaction.end_month is not none }}" /> (形式: YYYYMM)</td></tr>
 
-    <tr><td colspan='2'><input type="submit" value="{% if transaction.transaction_id %}Update{% else %}Create{% endif %}"></td></tr>
+    <tr><td colspan='2'><input type="submit" value="{% if transaction.transaction_id %}更新{% else %}作成{% endif %}"></td></tr>
 </table>
 </form>
 

@@ -3,23 +3,23 @@
 {% import 'transactions.html' as tr %}
 {% import 'history.html' as hl %}
 
-{% block title %}transaction{% endblock %}
+{% block title %}取引の詳細{% endblock %}
 
 {% block body %}
 
 {{ tr.render_transactions([transaction]) }}
 
-<h3>history</h3>
+<h3>履歴</h3>
 
 {{ hl.render_history(history) }}
 
-<h3>relations</h3>
+<h3>関連取引</h3>
 
-<p>sum: {{ "{0:,}".format(relations_sum) }}</p>
+<p>合計: {{ "{0:,}".format(relations_sum) }}</p>
 
 <p>
 <form method="post" action="/relations/create/{{ transaction.transaction_id }}">
-    <label for="id_related">id:</label>
+    <label for="id_related">ID:</label>
     <input type="text" name="related_transaction_id" required id="id_related" value="" />
 
     <input type="submit" value="add">
@@ -27,7 +27,7 @@
 </p>
 
 <table>
-    <tr><th>id</th><th>date</th><th>debit</th><th>amount</th><th>credit</th><th>description</th><th>delete</th></tr>
+    <tr><th>ID</th><th>日付</th><th>借方</th><th>金額</th><th>貸方</th><th>説明</th><th>削除</th></tr>
     {% for d in relations %}
     <tr>
         <td><a href="/transactions/{{ d.related_transaction_id }}">{{ d.related_transaction_id }}</a></td>
@@ -36,15 +36,15 @@
         <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
         <td><a href="/accounts/{{ d.credit_id }}">{{ d.credit }}</a></td>
         <td>{{ d.description }}</td>
-        <td><a href="/relations/delete/{{ d.transaction_id }}/{{ d.related_transaction_id }}">delete</a></td>
+        <td><a href="/relations/delete/{{ d.transaction_id }}/{{ d.related_transaction_id }}">削除</a></td>
     </tr>
     {% endfor %}
 </table>
 
-<h3>debug</h3>
+<h3>デバッグ</h3>
 
 <table>
-    <tr><th>month</th><th>name</th><th>accrual debit </th><th>accrual credit </th><th>cash debit </th><th>cash credit </th></tr>
+    <tr><th>年月</th><th>勘定科目</th><th>発生借方</th><th>発生貸方</th><th>借方</th><th>貸方</th></tr>
     {% for d in summary %}
     <tr>
         <td>{{ d.month }}</td>

@@ -3,20 +3,17 @@
 {% import 'pagination.html' as pg %}
 {% import 'transactions.html' as tr %}
 
-{% block title %}account{% endblock %}
+{% block title %}勘定科目の詳細{% endblock %}
 
 {% block body %}
 
 <h2>勘定科目 : {{ account.name }}</h2>
 
 <table>
-    <tr><th>month</th><th>accrual debit</th><th>accrual credit</th><th>accrual accum diff</th><th>cash debit</th><th>cash credit</th><th>cash accum diff</th></tr>
+    <tr><th>年月</th><th>借方</th><th>貸方</th><th>累積差分</th></tr>
     {% for d in summary %}
     <tr>
         <td>{{ d.month }}</td>
-        <td style="text-align: right;">{{ "{0:,}".format(d.accrual_debit_amount) }}</td>
-        <td style="text-align: right;">{{ "{0:,}".format(d.accrual_credit_amount) }}</td>
-        <td style="text-align: right;">{{ "{0:,}".format(d.accrual_accum_diff) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_debit_amount) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_credit_amount) }}</td>
         <td style="text-align: right;">{{ "{0:,}".format(d.cash_accum_diff) }}</td>
@@ -24,7 +21,7 @@
     {% endfor %}
 </table>
 
-<h3>transactions</h3>
+<h3>取引</h3>
 
 {{ tr.render_transactions(transactions) }}
 

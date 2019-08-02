@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{% if account.account_id %}update{% else %}create{% endif %} account{% endblock %}
+{% block title %}勘定科目の{% if account.account_id %}更新{% else %}作成{% endif %}{% endblock %}
 
 {% block body %}
 
@@ -17,9 +17,9 @@
 
 <table>
     {% if account.account_id %}
-    <tr><th><label>Type:</label></th><td>{{ account.account_type_name }}</td></tr>
+    <tr><th><label>タイプ:</label></th><td>{{ account.account_type_name }}</td></tr>
     {% else %}
-    <tr><th><label for="id_account_type">Type:</label></th><td><select name="account_type" required id="id_account_type">
+    <tr><th><label for="id_account_type">タイプ:</label></th><td><select name="account_type" required id="id_account_type">
         <option value="">---------</option>
         {% for ac in ['資産', '負債', '収入', '支出', 'その他'] %}
         {% if loop.index == account.account_type %}
@@ -31,9 +31,9 @@
         </td></tr>
     {% endif %}
 
-    <tr><th><label for="id_name">Name:</label></th><td><input type="text" name="name" value="{{ account.name }}" required id="id_name" /></td></tr>
+    <tr><th><label for="id_name">名前:</label></th><td><input type="text" name="name" value="{{ account.name }}" required id="id_name" /></td></tr>
 
-    <tr><td colspan='2'><input type="submit" value="{% if account.account_id %}update{% else %}create{% endif %}"></td></tr>
+    <tr><td colspan='2'><input type="submit" value="{% if account.account_id %}更新{% else %}作成{% endif %}"></td></tr>
 </table>
 </form>
 
