@@ -11,6 +11,7 @@ from hl_view import use_history
 from relations import use_relations
 from api import use_api
 from jinja import use_jinja
+from cmd import use_cmd
 
 
 app = Flask(__name__)
@@ -24,3 +25,4 @@ use_history(app)
 use_relations(app)
 use_api(app)
 use_jinja(app)
+use_cmd(app)
