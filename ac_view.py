@@ -90,7 +90,7 @@ def use_accounts(app):
     # ------------------------------------------------------------------------
 
     ACCOUNTS_SQL = '''
-    SELECT account_id, account_type, name
+    SELECT account_id, account_type, name, search_words
     FROM accounts
     ORDER BY account_type, account_id
     '''
@@ -130,13 +130,13 @@ def use_accounts(app):
 
     UPDATE_ACCOUNT_SQL = '''
     UPDATE accounts
-    SET name = %s
+    SET name = %s, search_words = %s
     WHERE account_id = %s
     '''
 
     INSERT_ACCOUNT_SQL = '''
-    INSERT INTO accounts(account_type, name)
-    VALUES(%s, %s)
+    INSERT INTO accounts(account_type, name, search_words)
+    VALUES(%s, %s, %s)
     '''
 
     def save(account):
@@ -145,12 +145,12 @@ def use_accounts(app):
                 d = account
 
                 if d.account_id:
-                    cur.execute(UPDATE_ACCOUNT_SQL, (d.name, d.account_id))
+                    cur.execute(UPDATE_ACCOUNT_SQL, (d.name, d.search_words, d.account_id))
                 else:
-                    cur.execute(INSERT_ACCOUNT_SQL, (d.account_type, d.name))
+                    cur.execute(INSERT_ACCOUNT_SQL, (d.account_type, d.name, d.search_words))
 
     ACCOUNT_SQL = '''
-    SELECT account_id, account_type, name
+    SELECT account_id, account_type, name, search_words
     FROM accounts
     WHERE account_id = %s
     '''

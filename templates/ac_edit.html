@@ -33,6 +33,8 @@
 
     <tr><th><label for="id_name">名前:</label></th><td><input type="text" name="name" value="{{ account.name }}" required id="id_name" /></td></tr>
 
+    <tr><th><label for="id_search_words">検索ワード:</label></th><td><input type="text" name="search_words" value="{{ account.search_words }}" id="id_search_words" /></td></tr>
+
     <tr><td colspan='2'><input type="submit" value="{% if account.account_id %}更新{% else %}作成{% endif %}"></td></tr>
 </table>
 </form>

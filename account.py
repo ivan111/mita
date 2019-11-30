@@ -18,16 +18,19 @@ class Account:
             self.account_id = form.get('account_id')
             self.account_type = form.get('account_type')
             self.name = form.get('name')
+            self.search_words = form.get('search_words')
 
             self.clean()
         elif data:
             self.account_id = data['account_id']
             self.account_type = data['account_type']
             self.name = data['name']
+            self.search_words = data['search_words']
         else:
             self.account_id = None
             self.account_type = None
             self.name = ''
+            self.search_words = ''
 
         if self.account_type == TYPE_ASSET:
             self.account_type_name = '資産'
