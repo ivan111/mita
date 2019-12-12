@@ -35,16 +35,16 @@ class Transaction:
             self.credit_id = None
             self.amount = 0
             self.description = ''
-            self.start_month = None
-            self.end_month = None
+            self.start_month = 0
+            self.end_month = 0
 
     def clean(self):
         self.transaction_id = conv_int(self.transaction_id, None)
         self.debit_id = conv_int(self.debit_id, None)
         self.credit_id = conv_int(self.credit_id, None)
         self.amount = conv_int(self.amount, 0)
-        self.start_month = conv_int(self.start_month, None)
-        self.end_month = conv_int(self.end_month, None)
+        self.start_month = conv_int(self.start_month, 0)
+        self.end_month = conv_int(self.end_month, 0)
 
     def validate(self):
         if not RE_DATE.match(self.date):
@@ -59,24 +59,24 @@ class Transaction:
             self.error_msg = "'credit_id' が数値でない"
             return False
 
-        if (self.start_month is None and self.end_month is not None) or \
-           (self.start_month is not None and self.end_month is None):
+        if (self.start_month == 0 and self.end_month != 0) or \
+           (self.start_month != 0 and self.end_month == 0):
             self.error_msg = "'start_month' と 'end_month' は片方だけ設定できない"
             return False
 
-        if self.start_month is not None:
+        if self.start_month != 0:
             month = self.start_month % 100
             if month < 1 or 12 < month:
                 self.error_msg = "'start_month' の月が 1 から 12 の間でない"
                 return False
 
-        if self.end_month is not None:
+        if self.end_month != 0:
             month = self.end_month % 100
             if month < 1 or 12 < month:
                 self.error_msg = "'end_month' の月が 1 から 12 の間でない"
                 return False
 
-        if self.start_month is not None and self.end_month is not None and \
+        if self.start_month != 0 and self.end_month != 0 and \
            self.start_month > self.end_month:
             self.error_msg = "'start_month' は 'end_month' よりも前でないといけない"
             return False

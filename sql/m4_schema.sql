@@ -29,11 +29,11 @@ CREATE TABLE transactions (
     credit_id integer NOT NULL REFERENCES accounts (account_id),
     amount integer NOT NULL,
     description varchar (64) NOT NULL,
-    start_month integer,  -- 発生主義から見た開始月
-    end_month integer,  -- 発生主義から見た終了月
+    start_month integer NOT NULL,  -- 発生主義から見た開始月
+    end_month integer NOT NULL,  -- 発生主義から見た終了月
 
     PRIMARY KEY (transaction_id),
-    CHECK ((start_month IS NULL AND end_month IS NULL) OR (start_month <= end_month))
+    CHECK ((start_month = 0 AND end_month = 0) OR (start_month > 0 AND end_month > 0 AND start_month <= end_month))
 );
 
 
@@ -56,8 +56,8 @@ CREATE TABLE transactions_history (
     credit_id integer NOT NULL REFERENCES accounts (account_id),
     amount integer NOT NULL,
     description varchar (64) NOT NULL,
-    start_month integer,
-    end_month integer,
+    start_month integer NOT NULL,
+    end_month integer NOT NULL,
 
     PRIMARY KEY (operation, transaction_id, version)
 );
@@ -154,7 +154,9 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE VIEW transactions_view AS
 SELECT tr.transaction_id, tr.date, tr.debit_id, de.name AS debit,
        tr.credit_id, cr.name AS credit, tr.amount,
-       tr.description, tr.start_month, tr.end_month
+       tr.description, tr.start_month, tr.end_month,
+       de.search_words as debit_search_words,
+       cr.search_words as credit_search_words
 FROM transactions AS tr
 LEFT JOIN accounts AS de ON tr.debit_id = de.account_id
 LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id;
@@ -392,7 +394,7 @@ BEGIN
 
     v_month := get_month(NEW.date);
 
-    IF NEW.start_month IS NULL AND NEW.end_month IS NULL THEN
+    IF NEW.start_month = 0 AND NEW.end_month = 0 THEN
         -- 期間が指定されてなければ、取引日の月に金額を振り分ける
         PERFORM insert_months(v_transaction_id, NEW.debit_id, NEW.credit_id, v_month, NEW.amount, NEW.amount);
 

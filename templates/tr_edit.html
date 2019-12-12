@@ -41,9 +41,9 @@
 
     <tr><th><label for="id_description">説明:</label></th><td><input type="text" name="description" maxlength="64" id="id_description" value="{{ transaction.description }}" /></td></tr>
 
-    <tr><th><label for="id_start_month">開始年月:</label></th><td><input type="text" name="start_month" id="id_start_month" value="{{ transaction.start_month if transaction.start_month is not none }}" /> (形式: YYYYMM)</td></tr>
+    <tr><th><label for="id_start_month">開始年月:</label></th><td><input type="number" name="start_month" id="id_start_month" value="{{ transaction.start_month }}" /> (形式: YYYYMM)</td></tr>
 
-    <tr><th><label for="id_end_month">終了年月:</label></th><td><input type="text" name="end_month" id="id_end_month" value="{{ transaction.end_month if transaction.end_month is not none }}" /> (形式: YYYYMM)</td></tr>
+    <tr><th><label for="id_end_month">終了年月:</label></th><td><input type="number" name="end_month" id="id_end_month" value="{{ transaction.end_month }}" /> (形式: YYYYMM)</td></tr>
 
     <tr><td colspan='2'><input type="submit" value="{% if transaction.transaction_id %}更新{% else %}作成{% endif %}"></td></tr>
 </table>

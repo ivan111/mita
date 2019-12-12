@@ -12,8 +12,8 @@
         <td style="text-align: right;">{{ "{0:,}".format(d.amount) }}</td>
         <td><a href="/accounts/{{ d.credit_id }}">{{ d.credit }}</a></td>
         <td>{{ d.description }}</td>
-        <td>{% if d.start_month is not none %}{{ d.start_month }}{% endif %}</td>
-        <td>{% if d.end_month is not none %}{{ d.end_month }}{% endif %}</td>
+        <td>{% if d.start_month != 0 %}{{ d.start_month }}{% endif %}</td>
+        <td>{% if d.end_month != 0 %}{{ d.end_month }}{% endif %}</td>
         {% if is_confirm_delete %}
         <td><a href="/transactions/delete/{{ d.transaction_id }}?next={{ request.args.get('next') | urlencode }}">削除</a></td>
         {% else %}
