@@ -182,7 +182,7 @@ RETURNING transaction_id
 
 func insertTransaction(db *sql.DB, tr *transaction) (string, error) {
 	var id string
-	err := db.QueryRow(insertTransactionSql, tr.date, tr.debit, tr.credit, tr.amount, tr.note, tr.start, tr.end).Scan(&id)
+	err := db.QueryRow(insertTransactionSql, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end).Scan(&id)
 
 	return id, err
 }
