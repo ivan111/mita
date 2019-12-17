@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const version = "0.1.0"
+
 type account struct {
 	id          int
 	name        string
@@ -35,6 +37,19 @@ type transaction struct {
 	end    int
 }
 
+func (tr *transaction) String() string {
+	rng := ""
+
+	if tr.start != 0 {
+		rng = fmt.Sprintf("[%d-%02d, %d-%02d]", tr.start/100, tr.start%100, tr.end/100, tr.end%100)
+	}
+
+	date := tr.date.Format("2006-01-02")
+
+	return fmt.Sprintf("%s %s/%s %s %s %s", date, tr.debit.name, tr.credit.name,
+		int2str(tr.amount), tr.note, rng)
+}
+
 var stdin = bufio.NewScanner(os.Stdin)
 
 func main() {
@@ -42,18 +57,20 @@ func main() {
 
 	app.Name = "mita-cli"
 	app.Usage = "cli(command line interface) of Mita's household accounts"
-	app.Version = "0.0.1"
+	app.Version = version
 
 	app.Commands = []cli.Command{
 		{
-			Name:   "add",
-			Usage:  "Insert a new transaction",
-			Action: add,
+			Name:    "add",
+			Aliases: []string{"insert"},
+			Usage:   "Insert a new transaction",
+			Action:  add,
 		},
 		{
-			Name:   "edit",
-			Usage:  "edit a transaction",
-			Action: edit,
+			Name:    "edit",
+			Aliases: []string{"update"},
+			Usage:   "edit a transaction",
+			Action:  edit,
 		},
 	}
 
@@ -73,29 +90,38 @@ func add(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	accounts, err := getAccounts(db)
+	if err != nil {
+		return err
+	}
+
 	var tr transaction
 
 	tr.date = scanDate()
-	if ac, err := selectAccount(db, "Debit"); err != nil {
+
+	debit, err := selectAccount(accounts, "Debit")
+	if err != nil {
 		return err
-	} else {
-		tr.debit = *ac
 	}
-	if ac, err := selectAccount(db, "Credit"); err != nil {
+	tr.debit = *debit
+
+	credit, err := selectAccount(accounts, "Credit")
+	if err != nil {
 		return err
-	} else {
-		tr.credit = *ac
 	}
+	tr.credit = *credit
+
 	tr.amount = scanAmount()
 	tr.note = scanNote()
 	tr.start, tr.end = scanRange()
 
-	if ok, err := confirmTransaction(db, &tr); err != nil {
+	ok, err := confirmTransaction(accounts, &tr)
+	if err != nil {
 		return err
-	} else if ok {
-		_, err = insertTransaction(db, &tr)
+	}
 
-		if err != nil {
+	if ok {
+		if _, err = insertTransaction(db, &tr); err != nil {
 			return err
 		}
 	}
@@ -104,21 +130,28 @@ func add(context *cli.Context) error {
 }
 
 func edit(context *cli.Context) error {
-	if len(context.Args()) != 0 {
-		fmt.Println("not implemented")
-	}
-
 	db, err := connectDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	if tr, err := selectTransaction(db); err != nil {
+	accounts, err := getAccounts(db)
+	if err != nil {
 		return err
-	} else if ok, err := confirmTransaction(db, tr); err != nil {
+	}
+
+	tr, err := selectTransaction(db)
+	if err != nil {
 		return err
-	} else if ok {
+	}
+
+	ok, err := confirmTransaction(accounts, tr)
+	if err != nil {
+		return err
+	}
+
+	if ok {
 		if err := updateTransaction(db, tr); err != nil {
 			return err
 		}
@@ -127,11 +160,11 @@ func edit(context *cli.Context) error {
 	return nil
 }
 
-func confirmTransaction(db *sql.DB, tr *transaction) (bool, error) {
+func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 	const q = "y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit)"
 
 	fmt.Println()
-	printTransaction(tr)
+	fmt.Println(tr)
 
 	fmt.Println(q)
 	stdin.Scan()
@@ -144,17 +177,17 @@ func confirmTransaction(db *sql.DB, tr *transaction) (bool, error) {
 		case "d", "date":
 			tr.date = scanDate()
 		case "l", "left":
-			if ac, err := selectAccount(db, "Debit"); err != nil {
+			debit, err := selectAccount(accounts, "Debit")
+			if err != nil {
 				return false, err
-			} else {
-				tr.debit = *ac
 			}
+			tr.debit = *debit
 		case "r", "right":
-			if ac, err := selectAccount(db, "Credit"); err != nil {
+			credit, err := selectAccount(accounts, "Credit")
+			if err != nil {
 				return false, err
-			} else {
-				tr.credit = *ac
 			}
+			tr.credit = *credit
 		case "a", "amount":
 			tr.amount = scanAmount()
 		case "n", "note":
@@ -164,7 +197,7 @@ func confirmTransaction(db *sql.DB, tr *transaction) (bool, error) {
 		}
 
 		fmt.Println()
-		printTransaction(tr)
+		fmt.Println(tr)
 
 		fmt.Println(q)
 		stdin.Scan()
@@ -174,7 +207,7 @@ func confirmTransaction(db *sql.DB, tr *transaction) (bool, error) {
 	return false, nil
 }
 
-const insertTransactionSql = `
+const insertTransactionSQL = `
 INSERT INTO transactions(date, debit_id, credit_id, amount, description, start_month, end_month)
 VALUES($1, $2, $3, $4, $5, $6, $7)
 RETURNING transaction_id
@@ -182,12 +215,12 @@ RETURNING transaction_id
 
 func insertTransaction(db *sql.DB, tr *transaction) (string, error) {
 	var id string
-	err := db.QueryRow(insertTransactionSql, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end).Scan(&id)
+	err := db.QueryRow(insertTransactionSQL, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end).Scan(&id)
 
 	return id, err
 }
 
-const updateTransactionSql = `
+const updateTransactionSQL = `
 UPDATE transactions SET
 date = $2,
 debit_id = $3,
@@ -200,54 +233,43 @@ WHERE transaction_id = $1
 `
 
 func updateTransaction(db *sql.DB, tr *transaction) error {
-	_, err := db.Exec(updateTransactionSql, tr.id, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end)
+	_, err := db.Exec(updateTransactionSQL, tr.id, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end)
 
 	return err
 }
 
-func printTransaction(tr *transaction) {
-	rng := ""
-
-	if tr.start != 0 {
-		rng = fmt.Sprintf("[%d-%02d, %d-%02d]", tr.start/100, tr.start%100, tr.end/100, tr.end%100)
-	}
-
-	fmt.Println(tr.date.Format("2006-01-02"), tr.debit.name, "/", tr.credit.name, int2str(tr.amount), tr.note, rng)
-}
-
-const selectAccountsSql = `
+const selectAccountsSQL = `
 SELECT account_id, name, search_words
 FROM accounts
 ORDER BY account_id
 `
 
-func getAccountsReader(db *sql.DB) (io.Reader, error) {
-	rows, err := db.Query(selectAccountsSql)
+func getAccounts(db *sql.DB) ([]account, error) {
+	rows, err := db.Query(selectAccountsSQL)
 	if err != nil {
 		return nil, err
 	}
 
-	reader := new(bytes.Buffer)
+	accounts := make([]account, 0)
 
 	for rows.Next() {
-		var id int64
-		var name, search_words string
+		var ac account
 
-		if err := rows.Scan(&id, &name, &search_words); err != nil {
+		if err := rows.Scan(&ac.id, &ac.name, &ac.searchWords); err != nil {
 			return nil, err
 		}
 
-		reader.Write([]byte(fmt.Sprintf("%d %s %s\n", id, name, search_words)))
+		accounts = append(accounts, ac)
 	}
 	rows.Close()
 
-	return reader, nil
+	return accounts, nil
 }
 
-func selectAccount(db *sql.DB, header string) (*account, error) {
-	src, err := getAccountsReader(db)
-	if err != nil {
-		return nil, err
+func selectAccount(accounts []account, header string) (*account, error) {
+	src := new(bytes.Buffer)
+	for _, ac := range accounts {
+		src.Write([]byte(fmt.Sprintf("%d %s %s\n", ac.id, ac.name, ac.searchWords)))
 	}
 
 	dst := new(bytes.Buffer)
@@ -261,14 +283,15 @@ func selectAccount(db *sql.DB, header string) (*account, error) {
 
 	arr := strings.Split(dst.String(), " ")
 
-	if v, err := strconv.Atoi(arr[0]); err != nil {
+	v, err := strconv.Atoi(arr[0])
+	if err != nil {
 		return nil, err
-	} else {
-		return &account{v, arr[1], arr[2]}, nil
 	}
+
+	return &account{v, arr[1], arr[2]}, nil
 }
 
-const selectTransactionsSql = `
+const selectTransactionsSQL = `
 SELECT transaction_id, date, debit_id, debit, debit_search_words, credit_id,
        credit, credit_search_words, amount, description, start_month, end_month
 FROM transactions_view
@@ -276,7 +299,7 @@ ORDER BY date DESC, transaction_id DESC
 `
 
 func getTransactionsReader(db *sql.DB) (io.Reader, error) {
-	rows, err := db.Query(selectTransactionsSql)
+	rows, err := db.Query(selectTransactionsSQL)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +348,7 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 	}
 }
 
-const selectTransactionSql = `
+const selectTransactionSQL = `
 SELECT transaction_id, date, debit_id, debit, debit_search_words, credit_id,
        credit, credit_search_words, amount, description, start_month, end_month
 FROM transactions_view
@@ -334,7 +357,7 @@ WHERE transaction_id = $1
 
 func getTransaction(db *sql.DB, id int) (*transaction, error) {
 	var tr transaction
-	err := db.QueryRow(selectTransactionSql, id).Scan(&tr.id, &tr.date,
+	err := db.QueryRow(selectTransactionSQL, id).Scan(&tr.id, &tr.date,
 		&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
 		&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
 		&tr.amount, &tr.note, &tr.start, &tr.end)
@@ -503,7 +526,7 @@ func str2date(s string) (time.Time, error) {
 		date := time.Date(today.Year(), today.Month(), v, 0, 0, 0, 0, time.Local)
 
 		if date.Day() != v {
-			return time.Time{}, errors.New("Error: invalid date")
+			return time.Time{}, errors.New("invalid date")
 		}
 
 		return date, nil
@@ -516,7 +539,7 @@ func str2date(s string) (time.Time, error) {
 	}
 
 	if len(arr) != 2 && len(arr) != 3 {
-		return time.Time{}, errors.New("Error: invalid date")
+		return time.Time{}, errors.New("invalid date")
 	}
 
 	var iArr = make([]int, 3)
@@ -544,7 +567,7 @@ func str2date(s string) (time.Time, error) {
 	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 
 	if date.Year() != year || int(date.Month()) != month || date.Day() != day {
-		return time.Time{}, errors.New("Error: invalid date")
+		return time.Time{}, errors.New("invalid date")
 	}
 
 	return date, nil
@@ -592,7 +615,7 @@ func str2month(s string) (int, error) {
 		}
 
 		if date.Month() != time.Month(v) {
-			return 0, errors.New("Error: invalid month")
+			return 0, errors.New("invalid month")
 		}
 
 		return time2month(date), nil
@@ -605,7 +628,7 @@ func str2month(s string) (int, error) {
 	}
 
 	if len(arr) != 2 {
-		return 0, errors.New("Error: invalid month")
+		return 0, errors.New("invalid month")
 	}
 
 	var iArr = make([]int, 3)
@@ -626,7 +649,7 @@ func str2month(s string) (int, error) {
 	date := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 
 	if date.Year() != year || int(date.Month()) != month {
-		return 0, errors.New("Error: invalid month")
+		return 0, errors.New("invalid month")
 	}
 
 	return time2month(date), nil
