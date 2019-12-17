@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 type account struct {
 	id          int
@@ -71,6 +71,12 @@ func main() {
 			Aliases: []string{"update"},
 			Usage:   "edit a transaction",
 			Action:  edit,
+		},
+		{
+			Name:    "delete",
+			Aliases: []string{"remove"},
+			Usage:   "delete a transaction",
+			Action:  remove,
 		},
 	}
 
@@ -160,6 +166,21 @@ func edit(context *cli.Context) error {
 	return nil
 }
 
+func remove(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	tr, err := selectTransaction(db)
+	if err != nil {
+		return err
+	}
+
+	return deleteTransaction(db, tr)
+}
+
 func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 	const q = "y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit)"
 
@@ -234,6 +255,17 @@ WHERE transaction_id = $1
 
 func updateTransaction(db *sql.DB, tr *transaction) error {
 	_, err := db.Exec(updateTransactionSQL, tr.id, tr.date, tr.debit.id, tr.credit.id, tr.amount, tr.note, tr.start, tr.end)
+
+	return err
+}
+
+const deleteTransactionSQL = `
+DELETE FROM transactions
+WHERE transaction_id = $1
+`
+
+func deleteTransaction(db *sql.DB, tr *transaction) error {
+	_, err := db.Exec(deleteTransactionSQL, tr.id)
 
 	return err
 }
