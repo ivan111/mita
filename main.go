@@ -37,6 +37,12 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:    "search",
+			Aliases: []string{"s"},
+			Usage:   "取引を検索",
+			Action:  cmdSearchTransaction,
+		},
+		{
 			Name:    "add",
 			Aliases: []string{"a"},
 			Usage:   "取引を追加",

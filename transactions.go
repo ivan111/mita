@@ -39,6 +39,35 @@ func (d *transaction) String() string {
 		int2str(d.amount), d.note, rng)
 }
 
+func cmdSearchTransaction(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	tr, err := selectTransaction(db)
+	if tr == nil || err != nil {
+		return err
+	}
+
+	fmt.Println(tr)
+
+	histories, err := dbGetHistory(db, tr.id)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+	fmt.Println("履歴:")
+
+	for _, d := range histories {
+		fmt.Println(&d)
+	}
+
+	return nil
+}
+
 func cmdAddTransaction(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {
