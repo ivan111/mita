@@ -33,7 +33,7 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 		return nil, err
 	}
 
-	accounts := make([]account, 0)
+	var accounts []account
 
 	for rows.Next() {
 		var ac account

@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 )
 
 type template struct {
@@ -34,7 +33,7 @@ type templateDetail struct {
 }
 
 func (d *templateDetail) String() string {
-	return fmt.Sprintf("%s/%s %s %s", d.debit.name, d.credit.name,
+	return fmt.Sprintf("%s / %s %s %s", d.debit.name, d.credit.name,
 		int2str(d.amount), d.note)
 }
 
@@ -149,7 +148,6 @@ func editTemplate(db *sql.DB, tmpl *template) error {
 			if err != nil {
 				return err
 			}
-
 			if d == nil {
 				break
 			}
@@ -271,9 +269,9 @@ func cmdRemoveTemplate(context *cli.Context) error {
 			return err
 		}
 
-		fmt.Println("deleted")
+		fmt.Println("削除完了")
 	} else {
-		fmt.Println("canceled")
+		fmt.Println("キャンセルした")
 	}
 
 	return nil
@@ -281,7 +279,7 @@ func cmdRemoveTemplate(context *cli.Context) error {
 
 func confirmRemoveTemplate(tmpl *template) bool {
 	fmt.Println(tmpl)
-	fmt.Print("Are you sure you want to delete? (Y/[no]): ")
+	fmt.Print("本当に削除する? (Y/[no]): ")
 	stdin.Scan()
 	return stdin.Text() == "Y"
 }
@@ -299,7 +297,7 @@ func cmdUseTemplate(context *cli.Context) error {
 	}
 
 	if len(tmpl.items) == 0 {
-		return errors.New("This template has no items.")
+		return errors.New("テンプレートに行が登録されてない")
 	}
 
 	accounts, err := dbGetAccounts(db)
@@ -351,19 +349,19 @@ func cmdUseTemplate(context *cli.Context) error {
 
 func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	if len(tmpl.items) == 0 {
-		fmt.Fprintln(os.Stderr, "no items")
+		fmt.Fprintln(os.Stderr, "テンプレートの中身がない")
 		return false, nil
 	}
 
 	var nwo []int
 
-	fmt.Println("input a new world order. (ex) 1 2 4 3")
+	fmt.Print("新しい順番 (例) 1 2 4 3: ")
 	stdin.Scan()
 
 	for _, s := range strings.Split(stdin.Text(), " ") {
 		v, err := strconv.Atoi(s)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "invalid input")
+			fmt.Fprintln(os.Stderr, "不正な値")
 			return false, nil
 		}
 
@@ -371,7 +369,7 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	}
 
 	if len(nwo) != len(tmpl.items) {
-		fmt.Fprintln(os.Stderr, "doen't match length")
+		fmt.Fprintln(os.Stderr, "長さが一致しない")
 		return false, nil
 	}
 
@@ -401,21 +399,21 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 }
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
-	const q = "y(es), l(eft), r(ight), a(mount), n(ote), q(uit): "
+	for {
+		fmt.Println()
+		fmt.Println(d)
 
-	fmt.Println()
-	fmt.Println(d)
+		fmt.Print("y(es), l(eft), r(ight), a(mount), n(ote), q(uit): ")
+		stdin.Scan()
+		a := strings.ToLower(stdin.Text())
 
-	fmt.Print(q)
-	stdin.Scan()
-	a := strings.ToLower(stdin.Text())
-
-	for a != "q" {
 		switch a {
+		case "q", "quit":
+			return false, nil
 		case "y", "yes":
 			return true, nil
 		case "l", "left":
-			debit, err := selectAccount(accounts, "Debit")
+			debit, err := selectAccount(accounts, "借方")
 			if err != nil {
 				return false, err
 			}
@@ -423,7 +421,7 @@ func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
 				d.debit = *debit
 			}
 		case "r", "right":
-			credit, err := selectAccount(accounts, "Credit")
+			credit, err := selectAccount(accounts, "貸方")
 			if err != nil {
 				return false, err
 			}
@@ -435,32 +433,25 @@ func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
 		case "n", "note":
 			d.note = scanNote()
 		}
-
-		fmt.Println()
-		fmt.Println(d)
-
-		fmt.Print(q)
-		stdin.Scan()
-		a = strings.ToLower(stdin.Text())
 	}
-
-	return false, nil
 }
 
 func confirmUseTemplate(accounts []account, trs []transaction) (bool, error) {
-	q := fmt.Sprintf("y(es), d(ate), 0-%d, q(uit): ", len(trs)-1)
+	q := fmt.Sprintf("y(es), d(ate), %s, q(uit): ", getRangeString(len(trs)))
 
-	fmt.Println()
-	for i, tr := range trs {
-		fmt.Println(i, &tr)
-	}
+	for {
+		fmt.Println()
+		for i, tr := range trs {
+			fmt.Println(i, &tr)
+		}
 
-	fmt.Print(q)
-	stdin.Scan()
-	a := strings.ToLower(stdin.Text())
+		fmt.Print(q)
+		stdin.Scan()
+		a := strings.ToLower(stdin.Text())
 
-	for a != "q" {
 		switch a {
+		case "q", "quit":
+			return false, nil
 		case "y", "yes":
 			return true, nil
 		case "d", "date":
@@ -482,18 +473,7 @@ func confirmUseTemplate(accounts []account, trs []transaction) (bool, error) {
 				}
 			}
 		}
-
-		fmt.Println()
-		for i, tr := range trs {
-			fmt.Println(i, &tr)
-		}
-
-		fmt.Print(q)
-		stdin.Scan()
-		a = strings.ToLower(stdin.Text())
 	}
-
-	return false, nil
 }
 
 const sqlGetTemplates = `
@@ -703,7 +683,7 @@ func selectTemplate(db *sql.DB) (*template, error) {
 
 	tmpl.items = items
 
-	fmt.Printf("Template: %s\n", tmpl.name)
+	fmt.Printf("テンプレート: %s\n", tmpl.name)
 
 	return tmpl, nil
 }
@@ -740,45 +720,27 @@ func selectTemplateDetail(items []templateDetail) (*templateDetail, error) {
 func scanTemplateDetail(accounts []account) (*templateDetail, error) {
 	var d templateDetail
 
-	debit, err := selectAccount(accounts, "Debit")
+	debit, err := selectAccount(accounts, "借方")
 	if err != nil {
 		return nil, err
 	}
-
 	if debit == nil {
 		return nil, nil
 	}
-
 	d.debit = *debit
 
-	credit, err := selectAccount(accounts, "Credit")
+	credit, err := selectAccount(accounts, "貸方")
 	if err != nil {
 		return nil, err
 	}
-
 	if credit == nil {
 		return nil, nil
 	}
-
 	d.credit = *credit
 
 	return &d, nil
 }
 
 func scanTemplateName() string {
-	fmt.Print("Template Name: ")
-	stdin.Scan()
-	name := stdin.Text()
-	nameLen := utf8.RuneCountInString(name)
-
-	for nameLen == 0 || 32 < nameLen {
-		fmt.Fprintln(os.Stderr, "Error: 0 < name length <= 32")
-
-		fmt.Print("Template Name: ")
-		stdin.Scan()
-		name = stdin.Text()
-		nameLen = utf8.RuneCountInString(name)
-	}
-
-	return name
+	return scanText("名前", 1, 32)
 }

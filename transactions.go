@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ func (d *transaction) String() string {
 
 	date := d.date.Format("2006-01-02")
 
-	return fmt.Sprintf("%s %s/%s %s %s %s", date, d.debit.name, d.credit.name,
+	return fmt.Sprintf("%s %s / %s %s %s %s", date, d.debit.name, d.credit.name,
 		int2str(d.amount), d.note, rng)
 }
 
@@ -122,9 +123,9 @@ func cmdRemoveTransaction(context *cli.Context) error {
 			return err
 		}
 
-		fmt.Println("deleted")
+		fmt.Println("削除完了")
 	} else {
-		fmt.Println("canceled")
+		fmt.Println("キャンセルした")
 	}
 
 	return nil
@@ -132,45 +133,43 @@ func cmdRemoveTransaction(context *cli.Context) error {
 
 func confirmRemoveTransaction(tr *transaction) bool {
 	fmt.Println(tr)
-	fmt.Print("Are you sure you want to delete? (Y/[no]): ")
+	fmt.Print("本当に削除する? (Y/[no]): ")
 	stdin.Scan()
 	return stdin.Text() == "Y"
 }
 
 func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
-	const q = "y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): "
+	for {
+		fmt.Println()
+		fmt.Println(tr)
 
-	fmt.Println()
-	fmt.Println(tr)
+		fmt.Print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
+		stdin.Scan()
+		a := strings.ToLower(stdin.Text())
 
-	fmt.Print(q)
-	stdin.Scan()
-	a := strings.ToLower(stdin.Text())
-
-	for a != "q" {
 		switch a {
+		case "q", "quit":
+			return false, nil
 		case "y", "yes":
 			return true, nil
 		case "d", "date":
 			tr.date = scanDate()
 		case "l", "left":
-			debit, err := selectAccount(accounts, "Debit")
+			debit, err := selectAccount(accounts, "借方")
 			if err != nil {
 				return false, err
 			}
-			if debit == nil {
-				break
+			if debit != nil {
+				tr.debit = *debit
 			}
-			tr.debit = *debit
 		case "r", "right":
-			credit, err := selectAccount(accounts, "Credit")
+			credit, err := selectAccount(accounts, "貸方")
 			if err != nil {
 				return false, err
 			}
-			if credit == nil {
-				break
+			if credit != nil {
+				tr.credit = *credit
 			}
-			tr.credit = *credit
 		case "a", "amount":
 			tr.amount = scanAmount()
 		case "n", "note":
@@ -178,16 +177,7 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 		case "s":
 			tr.start, tr.end = scanRange()
 		}
-
-		fmt.Println()
-		fmt.Println(tr)
-
-		fmt.Print(q)
-		stdin.Scan()
-		a = strings.ToLower(stdin.Text())
 	}
-
-	return false, nil
 }
 
 const sqlGetTransaction = `
@@ -321,7 +311,7 @@ func scanTransaction(accounts []account) (*transaction, error) {
 
 	tr.date = scanDate()
 
-	debit, err := selectAccount(accounts, "Debit")
+	debit, err := selectAccount(accounts, "借方")
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +320,7 @@ func scanTransaction(accounts []account) (*transaction, error) {
 	}
 	tr.debit = *debit
 
-	credit, err := selectAccount(accounts, "Credit")
+	credit, err := selectAccount(accounts, "貸方")
 	if err != nil {
 		return nil, err
 	}
@@ -347,45 +337,26 @@ func scanTransaction(accounts []account) (*transaction, error) {
 }
 
 func scanDate() time.Time {
-	fmt.Print("Date: ")
-	stdin.Scan()
-	text := stdin.Text()
-	date, err := str2date(text)
-
-	for err != nil {
-		fmt.Fprintln(os.Stderr, err)
-
-		fmt.Print("Date: ")
+	for {
+		fmt.Print("日付: ")
 		stdin.Scan()
-		text = stdin.Text()
-		date, err = str2date(text)
-	}
+		text := stdin.Text()
+		date, err := str2date(text)
 
-	return date
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			return date
+		}
+	}
 }
 
 func scanAmount() int {
-	fmt.Print("Amount: ")
-	stdin.Scan()
-	text := stdin.Text()
-	amount, err := strconv.Atoi(text)
-
-	for err != nil {
-		fmt.Fprintln(os.Stderr, "invalid input")
-
-		fmt.Print("Amount: ")
-		stdin.Scan()
-		text = stdin.Text()
-		amount, err = strconv.Atoi(text)
-	}
-
-	return amount
+	return scanInt("金額", math.MinInt32, math.MaxInt32)
 }
 
 func scanNote() string {
-	fmt.Print("Note: ")
-	stdin.Scan()
-	return stdin.Text()
+	return scanText("摘要", 0, 64)
 
 }
 
@@ -398,29 +369,34 @@ func scanMonth(name string) (int, error) {
 }
 
 func scanRange() (int, int) {
-	start, err := scanMonth("Start month")
+	var start, end int
 
-	for err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	for {
+		v, err := scanMonth("開始月")
 
-		start, err = scanMonth("Start month")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			start = v
+			break
+		}
 	}
 
 	if start == 0 {
 		return 0, 0
 	}
 
-	var end int
-	end, err = scanMonth("End month")
+	for {
+		v, err := scanMonth("終了月")
 
-	for err != nil || start > end {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+		} else if start > end {
+			fmt.Fprintln(os.Stderr, "開始月 <= 終了月")
 		} else {
-			fmt.Fprintln(os.Stderr, "Error: start month <= end month")
+			end = v
+			break
 		}
-
-		end, err = scanMonth("End month")
 	}
 
 	return start, end
@@ -457,7 +433,7 @@ func str2date(s string) (time.Time, error) {
 		date := time.Date(today.Year(), today.Month(), v, 0, 0, 0, 0, time.Local)
 
 		if date.Day() != v {
-			return time.Time{}, errors.New("invalid date")
+			return time.Time{}, errors.New("不正な日付")
 		}
 
 		return date, nil
@@ -470,7 +446,7 @@ func str2date(s string) (time.Time, error) {
 	}
 
 	if len(arr) != 2 && len(arr) != 3 {
-		return time.Time{}, errors.New("invalid date")
+		return time.Time{}, errors.New("不正な日付")
 	}
 
 	var iArr = make([]int, 3)
@@ -498,7 +474,7 @@ func str2date(s string) (time.Time, error) {
 	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 
 	if date.Year() != year || int(date.Month()) != month || date.Day() != day {
-		return time.Time{}, errors.New("invalid date")
+		return time.Time{}, errors.New("不正な日付")
 	}
 
 	return date, nil
@@ -550,7 +526,7 @@ func str2month(s string) (int, error) {
 		}
 
 		if date.Month() != time.Month(v) {
-			return 0, errors.New("invalid month")
+			return 0, errors.New("不正な月")
 		}
 
 		return time2month(date), nil
@@ -563,7 +539,7 @@ func str2month(s string) (int, error) {
 	}
 
 	if len(arr) != 2 {
-		return 0, errors.New("invalid month")
+		return 0, errors.New("不正な月")
 	}
 
 	var iArr = make([]int, 3)
@@ -584,7 +560,7 @@ func str2month(s string) (int, error) {
 	date := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 
 	if date.Year() != year || int(date.Month()) != month {
-		return 0, errors.New("invalid month")
+		return 0, errors.New("不正な月")
 	}
 
 	return time2month(date), nil

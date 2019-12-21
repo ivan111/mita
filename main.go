@@ -10,8 +10,10 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"sync"
 	"syscall"
+	"unicode/utf8"
 )
 
 const version = "0.2.0"
@@ -23,62 +25,62 @@ var stdin = bufio.NewScanner(os.Stdin)
 func main() {
 	_, err := exec.LookPath("fzf")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "not found 'fzf' executable\n")
+		fmt.Fprintf(os.Stderr, "実行ファイル'fzf'が見つからない\n")
 		return
 	}
 
 	app := cli.NewApp()
 
 	app.Name = "mita-cli"
-	app.Usage = "cli(command line interface) of Mita's household accounts"
+	app.Usage = "家計簿のミタCLI"
 	app.Version = version
 
 	app.Commands = []cli.Command{
 		{
 			Name:    "add",
 			Aliases: []string{"a"},
-			Usage:   "add a new transaction",
+			Usage:   "取引を追加",
 			Action:  cmdAddTransaction,
 		},
 		{
 			Name:    "edit",
 			Aliases: []string{"e"},
-			Usage:   "edit a transaction",
+			Usage:   "取引を編集",
 			Action:  cmdEditTransaction,
 		},
 		{
 			Name:    "remove",
 			Aliases: []string{"r"},
-			Usage:   "remove a transaction",
+			Usage:   "取引を削除",
 			Action:  cmdRemoveTransaction,
 		},
 		{
 			Name:    "template",
 			Aliases: []string{"t"},
-			Usage:   "options for transactions templates",
+			Usage:   "テンプレートのオプション",
 			Subcommands: []cli.Command{
 				{
 					Name:    "add",
 					Aliases: []string{"a"},
-					Usage:   "add a new template",
+					Usage:   "テンプレートを追加",
 					Action:  cmdAddTemplate,
 				},
 				{
 					Name:    "edit",
 					Aliases: []string{"e"},
-					Usage:   "edit a template",
+					Usage:   "テンプレートを編集",
 					Action:  cmdEditTemplate,
 				},
 				{
 					Name:    "remove",
 					Aliases: []string{"r"},
-					Usage:   "remove a template",
+					Usage:   "テンプレートを削除",
 					Action:  cmdRemoveTemplate,
 				},
 				{
 					Name:    "use",
 					Aliases: []string{"u"},
-					Usage:   "use a template",
+					Usage:   "テンプレートを使用",
 					Action:  cmdUseTemplate,
 				},
 			},
@@ -86,7 +88,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		fmt.Fprintln(os.Stderr, "エラー:", err)
 	}
 }
 
@@ -140,7 +142,7 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 		if e, ok := err.(*os.PathError); ok && e.Err == syscall.EPIPE {
 			// ignore EPIPE
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, "Error: failed to write to STDIN of fzf", err)
+			fmt.Fprintln(os.Stderr, "エラー: fzfの標準入力への書き込みに失敗", err)
 		}
 
 		stdin.Close()
@@ -164,8 +166,43 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 	wg.Wait()
 	err := cmd.Wait()
 	if err != nil && err.Error() == "exit status 130" {
+		// ESCキーを押して選択がキャンセルされた
 		return true, nil
 	}
 
 	return false, err
+}
+
+func scanInt(prompt string, minValue int, maxValue int) int {
+	for {
+		fmt.Printf("%s: ", prompt)
+		stdin.Scan()
+		text := stdin.Text()
+		v, err := strconv.Atoi(text)
+
+		if v >= minValue && v <= maxValue {
+			return v
+		}
+
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "エラー: 数値を入力してください")
+		} else {
+			fmt.Fprintf(os.Stderr, "エラー: 値が範囲外 [%d, %d]\n", minValue, maxValue)
+		}
+	}
+}
+
+func scanText(prompt string, minLen int, maxLen int) string {
+	for {
+		fmt.Printf("%s: ", prompt)
+		stdin.Scan()
+		text := stdin.Text()
+		textLen := utf8.RuneCountInString(text)
+
+		if textLen >= minLen && textLen <= maxLen {
+			return text
+		}
+
+		fmt.Fprintf(os.Stderr, "エラー: 文字数が範囲外 [%d, %d]\n", minLen, maxLen)
+	}
 }
