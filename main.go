@@ -55,6 +55,31 @@ func main() {
 			Action:  cmdRemoveTransaction,
 		},
 		{
+			Name:    "account",
+			Aliases: []string{"ac"},
+			Usage:   "勘定科目のオプション",
+			Subcommands: []cli.Command{
+				{
+					Name:    "add",
+					Aliases: []string{"a"},
+					Usage:   "勘定科目を追加",
+					Action:  cmdAddAccount,
+				},
+				{
+					Name:    "edit",
+					Aliases: []string{"e"},
+					Usage:   "勘定科目を編集",
+					Action:  cmdEditAccount,
+				},
+				{
+					Name:    "remove",
+					Aliases: []string{"r"},
+					Usage:   "勘定科目を削除",
+					Action:  cmdRemoveAccount,
+				},
+			},
+		},
+		{
 			Name:    "template",
 			Aliases: []string{"t"},
 			Usage:   "テンプレートのオプション",
