@@ -242,7 +242,7 @@ func cmdRemoveTemplate(context *cli.Context) error {
 	defer db.Close()
 
 	tmpl, err := selectTemplate(db)
-	if err != nil {
+	if tmpl == nil || err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func cmdUseTemplate(context *cli.Context) error {
 	defer db.Close()
 
 	tmpl, err := selectTemplate(db)
-	if err != nil {
+	if tmpl == nil || err != nil {
 		return err
 	}
 

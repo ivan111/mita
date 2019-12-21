@@ -54,6 +54,9 @@ func cmdAddTransaction(context *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if tr == nil {
+		return nil
+	}
 
 	ok, err := confirmTransaction(accounts, tr)
 	if err != nil {
@@ -155,11 +158,17 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 			if err != nil {
 				return false, err
 			}
+			if debit == nil {
+				break
+			}
 			tr.debit = *debit
 		case "r", "right":
 			credit, err := selectAccount(accounts, "Credit")
 			if err != nil {
 				return false, err
+			}
+			if credit == nil {
+				break
 			}
 			tr.credit = *credit
 		case "a", "amount":
@@ -316,11 +325,17 @@ func scanTransaction(accounts []account) (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	if debit == nil {
+		return nil, nil
+	}
 	tr.debit = *debit
 
 	credit, err := selectAccount(accounts, "Credit")
 	if err != nil {
 		return nil, err
+	}
+	if credit == nil {
+		return nil, nil
 	}
 	tr.credit = *credit
 
