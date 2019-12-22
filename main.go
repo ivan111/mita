@@ -61,6 +61,11 @@ func main() {
 			Action:  cmdRemoveTransaction,
 		},
 		{
+			Name:   "bs",
+			Usage:  "資産・負債の一覧",
+			Action: cmdBS,
+		},
+		{
 			Name:   "undo",
 			Usage:  "取引への操作を元に戻す",
 			Action: cmdUndoTransaction,
