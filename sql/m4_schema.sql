@@ -127,6 +127,35 @@ CREATE TABLE relations (
 
 
 /*
+ * テンプレートテーブル
+ */
+CREATE TABLE templates (
+    template_id SERIAL,
+    name varchar(32) NOT NULL,
+
+    PRIMARY KEY (template_id)
+);
+
+
+/*
+ * テンプレート詳細テーブル
+ */
+CREATE TABLE templates_detail (
+    template_id integer NOT NULL REFERENCES templates (template_id),
+    no integer NOT NULL,
+
+    order_no integer NOT NULL,
+
+    debit_id integer NOT NULL REFERENCES accounts (account_id),
+    credit_id integer NOT NULL REFERENCES accounts (account_id),
+    amount integer NOT NULL,
+    description varchar (64) NOT NULL,
+
+    PRIMARY KEY (template_id, no)
+);
+
+
+/*
  * 収支ビュー
  */
 CREATE OR REPLACE VIEW bp_view AS
@@ -214,6 +243,19 @@ SELECT CASE tr.operation
 FROM transactions_history AS tr
 LEFT JOIN accounts AS de ON tr.debit_id = de.account_id
 LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id;
+
+
+/*
+ * テンプレート詳細ビュー
+ */
+CREATE OR REPLACE VIEW templates_detail_view AS
+SELECT t.template_id, t.no, t.order_no,
+       t.debit_id, de.name AS debit_name, de.search_words AS debit_search_words,
+       t.credit_id, cr.name AS credit_name, cr.search_words AS credit_search_words,
+       t.amount, t.description
+FROM templates_detail AS t
+LEFT JOIN accounts AS de ON t.debit_id = de.account_id
+LEFT JOIN accounts AS cr ON t.credit_id = cr.account_id;
 
 
 CREATE TYPE month_balance AS (name varchar(8), amount integer);
