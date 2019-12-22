@@ -38,9 +38,11 @@ func cmdBS(context *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(&d)
+		if d.balance != 0 {
+			fmt.Println(&d)
 
-		assetSum += d.balance
+			assetSum += d.balance
+		}
 	}
 
 	fmt.Println()
@@ -50,9 +52,11 @@ func cmdBS(context *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(&d)
+		if d.balance != 0 {
+			fmt.Println(&d)
 
-		liabilitySum += d.balance
+			liabilitySum += d.balance
+		}
 	}
 
 	fmt.Println()
@@ -97,9 +101,11 @@ func cmdPL(context *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(&d)
+		if d.balance != 0 {
+			fmt.Println(&d)
 
-		incomeSum += d.balance
+			incomeSum += d.balance
+		}
 	}
 
 	fmt.Println()
@@ -109,9 +115,11 @@ func cmdPL(context *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(&d)
+		if d.balance != 0 {
+			fmt.Println(&d)
 
-		expenseSum += d.balance
+			expenseSum += d.balance
+		}
 	}
 
 	fmt.Println()
