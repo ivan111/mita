@@ -138,6 +138,17 @@ FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
 GROUP BY ts.month;
 
+CREATE OR REPLACE VIEW bp2_view AS
+SELECT ts.month,
+       ac.account_id, ac.account_type, ac.name,
+       SUM(CASE WHEN ac.account_type = TYPE_INCOME THEN accrual_credit_amount - accrual_debit_amount
+                WHEN ac.account_type = TYPE_EXPENSE THEN accrual_debit_amount - accrual_credit_amount
+           ELSE 0 END)
+       AS balance
+FROM transactions_summary AS ts
+LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
+GROUP BY ts.month, ac.account_id, ac.account_type, ac.name;
+
 
 /*
  * 日付から月を表す数値を取得
