@@ -24,6 +24,10 @@ type account struct {
 	accountType int
 	name        string
 	searchWords string
+	parent      struct {
+		id   int
+		name string
+	}
 }
 
 func (d *account) String() string {
@@ -37,12 +41,17 @@ func cmdAddAccount(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	d, err := scanAccount()
+	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
 	}
 
-	ok, err := confirmAccount(d, true)
+	d, err := scanAccount(accounts)
+	if err != nil {
+		return err
+	}
+
+	ok, err := confirmAccount(accounts, d, true)
 	if err != nil {
 		return err
 	}
@@ -73,7 +82,7 @@ func cmdEditAccount(context *cli.Context) error {
 		return err
 	}
 
-	ok, err := confirmAccount(d, false)
+	ok, err := confirmAccount(accounts, d, false)
 	if err != nil {
 		return err
 	}
@@ -127,15 +136,15 @@ func confirmRemoveAccount(d *account) bool {
 	return stdin.Text() == "Y"
 }
 
-func confirmAccount(d *account, enableType bool) (bool, error) {
+func confirmAccount(accounts []account, d *account, enableType bool) (bool, error) {
 	for {
 		fmt.Println()
-		fmt.Printf("%s %s %s\n", acType2str(d.accountType), d.name, d.searchWords)
+		fmt.Printf("%s %s %s (%s)\n", acType2str(d.accountType), d.name, d.searchWords, d.parent.name)
 
 		if enableType {
-			fmt.Print("y(es), t(ype), n(ame), s(earch words), q(uit): ")
+			fmt.Print("y(es), t(ype), n(ame), s(earch words), p(arent), q(uit): ")
 		} else {
-			fmt.Print("y(es), n(ame), s(earch words), q(uit): ")
+			fmt.Print("y(es), n(ame), s(earch words), p(arent), q(uit): ")
 		}
 		stdin.Scan()
 		a := strings.ToLower(stdin.Text())
@@ -151,6 +160,18 @@ func confirmAccount(d *account, enableType bool) (bool, error) {
 			}
 		case "n", "name":
 			d.name = scanAccountName()
+		case "p", "parent":
+			parent, err := selectAccount(accounts, "親")
+			if err != nil {
+				return false, err
+			}
+			if parent != nil {
+				d.parent.id = parent.id
+				d.parent.name = parent.name
+			} else {
+				d.parent.id = 0
+				d.parent.name = ""
+			}
 		case "s", "search words":
 			d.searchWords = scanSearchWords()
 		}
@@ -158,8 +179,9 @@ func confirmAccount(d *account, enableType bool) (bool, error) {
 }
 
 const sqlGetAccounts = `
-SELECT account_id, account_type, name, search_words
-FROM accounts
+SELECT ac.account_id, ac.account_type, ac.name, ac.search_words, COALESCE(p.account_id, 0), COALESCE(p.name, '')
+FROM accounts ac
+LEFT JOIN accounts AS p ON ac.parent = p.account_id
 ORDER BY account_type, account_id
 `
 
@@ -174,7 +196,7 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 	for rows.Next() {
 		var ac account
 
-		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords); err != nil {
+		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords, &ac.parent.id, &ac.parent.name); err != nil {
 			return nil, err
 		}
 
@@ -186,14 +208,14 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 }
 
 const sqlAddAccount = `
-INSERT INTO accounts(account_type, name, search_words)
-VALUES($1, $2, $3)
+INSERT INTO accounts(account_type, name, search_words, parent)
+VALUES($1, $2, $3, $4)
 RETURNING account_id
 `
 
 func dbAddAccount(db dbtx, d *account) (string, error) {
 	var id string
-	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords).Scan(&id)
+	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords, d.parent.id).Scan(&id)
 
 	return id, err
 }
@@ -201,12 +223,13 @@ func dbAddAccount(db dbtx, d *account) (string, error) {
 const sqlEditAccount = `
 UPDATE accounts SET
 name = $2,
-search_words = $3
+search_words = $3,
+parent = $4
 WHERE account_id = $1
 `
 
 func dbEditAccount(db *sql.DB, d *account) error {
-	_, err := db.Exec(sqlEditAccount, d.id, d.name, d.searchWords)
+	_, err := db.Exec(sqlEditAccount, d.id, d.name, d.searchWords, d.parent.id)
 
 	return err
 }
@@ -225,7 +248,7 @@ func dbRemoveAccount(db *sql.DB, id int) error {
 func selectAccount(accounts []account, header string) (*account, error) {
 	src := new(bytes.Buffer)
 	for i, ac := range accounts {
-		src.Write([]byte(fmt.Sprintf("%d %s %s\n", i, ac.name, ac.searchWords)))
+		src.Write([]byte(fmt.Sprintf("%d %s %s (%s)\n", i, ac.name, ac.searchWords, ac.parent.name)))
 	}
 
 	dst := new(bytes.Buffer)
@@ -256,12 +279,20 @@ func selectAccount(accounts []account, header string) (*account, error) {
 	return &d, nil
 }
 
-func scanAccount() (*account, error) {
+func scanAccount(accounts []account) (*account, error) {
 	var d account
 
 	d.accountType = scanAccountType()
 	d.name = scanAccountName()
 	d.searchWords = scanSearchWords()
+	parent, err := selectAccount(accounts, "親")
+	if err != nil {
+		return nil, err
+	}
+	if parent != nil {
+		d.parent.id = parent.id
+		d.parent.name = parent.name
+	}
 
 	return &d, nil
 }
