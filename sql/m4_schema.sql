@@ -59,7 +59,7 @@ CREATE TABLE transactions_history (
     start_month integer NOT NULL,
     end_month integer NOT NULL,
 
-    PRIMARY KEY (operation, transaction_id, version)
+    PRIMARY KEY (transaction_id, version)
 );
 
 
@@ -152,7 +152,7 @@ $$ LANGUAGE SQL;
  * 取引ビュー
  */
 CREATE OR REPLACE VIEW transactions_view AS
-SELECT tr.transaction_id, tr.date, tr.debit_id, de.name AS debit,
+SELECT tr.transaction_id, tr.version, tr.date, tr.debit_id, de.name AS debit,
        tr.credit_id, cr.name AS credit, tr.amount,
        tr.description, tr.start_month, tr.end_month,
        de.search_words as debit_search_words,
@@ -196,7 +196,7 @@ SELECT CASE tr.operation
                 ELSE 'UNKNOWN'
        END AS operation,
        tr.operate_time,
-       tr.transaction_id, tr.date, tr.debit_id, de.name AS debit,
+       tr.transaction_id, tr.version, tr.date, tr.debit_id, de.name AS debit,
        tr.credit_id, cr.name AS credit, tr.amount,
        tr.description, tr.start_month, tr.end_month
 FROM transactions_history AS tr
@@ -266,6 +266,7 @@ BEFORE UPDATE ON transactions
 CREATE OR REPLACE FUNCTION update_transactions_history() RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'DELETE') THEN
+        OLD.version := OLD.version + 1;
         INSERT INTO transactions_history SELECT 'D', now(), OLD.*;
     ELSIF (TG_OP = 'UPDATE') THEN
         INSERT INTO transactions_history SELECT 'U', now(), NEW.*;
