@@ -66,6 +66,11 @@ func main() {
 			Action: cmdBS,
 		},
 		{
+			Name:   "pl",
+			Usage:  "月の収入・費用の一覧",
+			Action: cmdPL,
+		},
+		{
 			Name:   "undo",
 			Usage:  "取引への操作を元に戻す",
 			Action: cmdUndoTransaction,
