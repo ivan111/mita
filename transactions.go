@@ -16,14 +16,15 @@ import (
 )
 
 type transaction struct {
-	id     int
-	date   time.Time
-	debit  account
-	credit account
-	amount int
-	note   string
-	start  int
-	end    int
+	id      int
+	version int
+	date    time.Time
+	debit   account
+	credit  account
+	amount  int
+	note    string
+	start   int
+	end     int
 }
 
 func (d *transaction) String() string {
@@ -147,7 +148,7 @@ func cmdRemoveTransaction(context *cli.Context) error {
 
 	ok := confirmRemoveTransaction(tr)
 	if ok {
-		err := dbRemoveTransaction(db, tr)
+		err := dbRemoveTransaction(db, tr.id)
 		if err != nil {
 			return err
 		}
@@ -163,6 +164,59 @@ func cmdRemoveTransaction(context *cli.Context) error {
 func confirmRemoveTransaction(tr *transaction) bool {
 	fmt.Println(tr)
 	fmt.Print("本当に削除する? (Y/[no]): ")
+	stdin.Scan()
+	return stdin.Text() == "Y"
+}
+
+func cmdUndoTransaction(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	d, err := selectUndoableHistory(db)
+	if err != nil {
+		return err
+	}
+	if d == nil {
+		return nil
+	}
+
+	ok := confirmUndoTransaction(d)
+	if ok {
+		switch d.operation {
+		case "DELETE":
+			err = dbAddTransactionForUndo(db, d)
+		case "UPDATE":
+			prev, err := dbGetHistory1(db, d.tr.id, d.tr.version-1)
+			if err != nil {
+				return err
+			}
+
+			err = dbEditTransaction(db, &prev.tr)
+			if err == nil {
+				fmt.Println(&prev.tr)
+			}
+		case "INSERT":
+			err = dbRemoveTransaction(db, d.tr.id)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("UNDO完了")
+	} else {
+		fmt.Println("キャンセルした")
+	}
+
+	return nil
+}
+
+func confirmUndoTransaction(d *history) bool {
+	fmt.Println(d)
+	fmt.Print("本当にUNDOする? (Y/[no]): ")
 	stdin.Scan()
 	return stdin.Text() == "Y"
 }
@@ -210,7 +264,7 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 }
 
 const sqlGetTransaction = `
-SELECT transaction_id, date, debit_id, debit, debit_search_words, credit_id,
+SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
        credit, credit_search_words, amount, description, start_month, end_month
 FROM transactions_view
 WHERE transaction_id = $1
@@ -218,7 +272,7 @@ WHERE transaction_id = $1
 
 func dbGetTransaction(db *sql.DB, id int) (*transaction, error) {
 	var tr transaction
-	err := db.QueryRow(sqlGetTransaction, id).Scan(&tr.id, &tr.date,
+	err := db.QueryRow(sqlGetTransaction, id).Scan(&tr.id, &tr.version, &tr.date,
 		&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
 		&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
 		&tr.amount, &tr.note, &tr.start, &tr.end)
@@ -231,7 +285,7 @@ func dbGetTransaction(db *sql.DB, id int) (*transaction, error) {
 }
 
 const sqlGetTransactions = `
-SELECT transaction_id, date, debit_id, debit, debit_search_words, credit_id,
+SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
        credit, credit_search_words, amount, description, start_month, end_month
 FROM transactions_view
 ORDER BY date DESC, transaction_id DESC
@@ -248,7 +302,7 @@ func getTransactionsReader(db *sql.DB) (io.Reader, error) {
 	for rows.Next() {
 		var tr transaction
 
-		err = rows.Scan(&tr.id, &tr.date,
+		err = rows.Scan(&tr.id, &tr.version, &tr.date,
 			&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
 			&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
 			&tr.amount, &tr.note, &tr.start, &tr.end)
@@ -278,6 +332,22 @@ func dbAddTransaction(db dbtx, tr *transaction) (string, error) {
 	return id, err
 }
 
+const sqlAddTransactionForUndo = `
+INSERT INTO transactions(transaction_id, version, date, debit_id, credit_id, amount, description, start_month, end_month)
+VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
+`
+
+func dbAddTransactionForUndo(db dbtx, d *history) error {
+	if d.operation != "DELETE" {
+		return errors.New("dbAddTransactionForUndoの引数はDELETEの履歴のみ")
+	}
+
+	_, err := db.Exec(sqlAddTransactionForUndo, d.tr.id, d.tr.version+1,
+		d.tr.date, d.tr.debit.id, d.tr.credit.id, d.tr.amount, d.tr.note, d.tr.start, d.tr.end)
+
+	return err
+}
+
 const sqlEditTransaction = `
 UPDATE transactions SET
 date = $2,
@@ -301,8 +371,8 @@ DELETE FROM transactions
 WHERE transaction_id = $1
 `
 
-func dbRemoveTransaction(db *sql.DB, tr *transaction) error {
-	_, err := db.Exec(sqlRemoveTransaction, tr.id)
+func dbRemoveTransaction(db *sql.DB, id int) error {
+	_, err := db.Exec(sqlRemoveTransaction, id)
 
 	return err
 }

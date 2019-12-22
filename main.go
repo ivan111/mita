@@ -61,6 +61,11 @@ func main() {
 			Action:  cmdRemoveTransaction,
 		},
 		{
+			Name:   "undo",
+			Usage:  "取引への操作を元に戻す",
+			Action: cmdUndoTransaction,
+		},
+		{
 			Name:    "account",
 			Aliases: []string{"ac"},
 			Usage:   "勘定科目のオプション",

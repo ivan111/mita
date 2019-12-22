@@ -107,7 +107,7 @@ func cmdRemoveAccount(context *cli.Context) error {
 	ok := confirmRemoveAccount(d)
 	if ok {
 		// 使用されてる勘定科目の場合はエラーになる
-		err := dbRemoveAccount(db, d)
+		err := dbRemoveAccount(db, d.id)
 		if err != nil {
 			return err
 		}
@@ -216,8 +216,8 @@ DELETE FROM accounts
 WHERE account_id = $1
 `
 
-func dbRemoveAccount(db *sql.DB, d *account) error {
-	_, err := db.Exec(sqlRemoveAccount, d.id)
+func dbRemoveAccount(db *sql.DB, id int) error {
+	_, err := db.Exec(sqlRemoveAccount, id)
 
 	return err
 }
