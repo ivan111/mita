@@ -13,6 +13,7 @@ CREATE TABLE accounts (
     account_type integer NOT NULL CHECK(account_type BETWEEN 1 AND 5),
     name varchar(8) NOT NULL,
     search_words varchar(32) NOT NULL DEFAULT '',
+    parent integer NOT NULL DEFAULT 0,
 
     PRIMARY KEY (account_id)
 );
