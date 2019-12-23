@@ -469,14 +469,14 @@ func scanMonth(name string) (int, error) {
 
 func scanRange() (int, int) {
 	var start, end int
+	var err error
 
 	for {
-		v, err := scanMonth("開始月")
+		start, err = scanMonth("開始月")
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		} else {
-			start = v
 			break
 		}
 	}
@@ -486,14 +486,13 @@ func scanRange() (int, int) {
 	}
 
 	for {
-		v, err := scanMonth("終了月")
+		end, err = scanMonth("終了月")
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		} else if start > end {
 			fmt.Fprintln(os.Stderr, "開始月 <= 終了月")
 		} else {
-			end = v
 			break
 		}
 	}
