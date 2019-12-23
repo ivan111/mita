@@ -337,7 +337,10 @@ func cmdUseTemplate(context *cli.Context) error {
 	}
 
 	for _, tr := range trs {
-		_, err = dbAddTransaction(tx, &tr)
+		if tr.amount != 0 {
+			_, err = dbAddTransaction(tx, &tr)
+		}
+
 		if err != nil {
 			tx.Rollback()
 			return err
