@@ -88,7 +88,12 @@ func cmdPL(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	items, err := dbGetBP(db, month)
+	items, err := dbGetGroupedPL(db, month)
+	if err != nil {
+		return err
+	}
+
+	p2d, err := dbGetPL(db, month)
 	if err != nil {
 		return err
 	}
@@ -101,10 +106,12 @@ func cmdPL(context *cli.Context) error {
 			continue
 		}
 
-		if d.balance != 0 {
-			fmt.Println(&d)
+		fmt.Println(&d)
 
-			incomeSum += d.balance
+		incomeSum += d.balance
+
+		if len(p2d[d.id]) > 1 {
+			printSubItems(p2d[d.id])
 		}
 	}
 
@@ -115,10 +122,12 @@ func cmdPL(context *cli.Context) error {
 			continue
 		}
 
-		if d.balance != 0 {
-			fmt.Println(&d)
+		fmt.Println(&d)
 
-			expenseSum += d.balance
+		expenseSum += d.balance
+
+		if len(p2d[d.id]) > 1 {
+			printSubItems(p2d[d.id])
 		}
 	}
 
@@ -128,6 +137,12 @@ func cmdPL(context *cli.Context) error {
 	fmt.Printf("損益: %s\n", int2str(incomeSum-expenseSum))
 
 	return nil
+}
+
+func printSubItems(items []summary) {
+	for _, d := range items {
+		fmt.Printf("    %v\n", &d)
+	}
 }
 
 const sqlGetBalances = `
@@ -157,14 +172,15 @@ func dbGetBalances(db *sql.DB) ([]summary, error) {
 	return balances, nil
 }
 
-const sqlGetBP = `
+const sqlGetGroupedPL = `
 SELECT account_id, account_type, name, balance
 FROM grouped_pl_view
 WHERE month = $1
+ORDER BY account_type, account_id
 `
 
-func dbGetBP(db *sql.DB, month int) ([]summary, error) {
-	rows, err := db.Query(sqlGetBP, month)
+func dbGetGroupedPL(db *sql.DB, month int) ([]summary, error) {
+	rows, err := db.Query(sqlGetGroupedPL, month)
 	if err != nil {
 		return nil, err
 	}
@@ -183,4 +199,33 @@ func dbGetBP(db *sql.DB, month int) ([]summary, error) {
 	rows.Close()
 
 	return balances, nil
+}
+
+const sqlGetPL = `
+SELECT account_id, account_type, name, parent, balance
+FROM pl_view
+WHERE month = $1
+`
+
+func dbGetPL(db *sql.DB, month int) (map[int][]summary, error) {
+	rows, err := db.Query(sqlGetPL, month)
+	if err != nil {
+		return nil, err
+	}
+
+	p2d := map[int][]summary{}
+
+	for rows.Next() {
+		var d summary
+		var p int
+
+		if err := rows.Scan(&d.id, &d.accountType, &d.name, &p, &d.balance); err != nil {
+			return nil, err
+		}
+
+		p2d[p] = append(p2d[p], d)
+	}
+	rows.Close()
+
+	return p2d, nil
 }
