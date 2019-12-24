@@ -13,10 +13,23 @@ CREATE TABLE accounts (
     account_type integer NOT NULL CHECK(account_type BETWEEN 1 AND 5),
     name varchar(8) NOT NULL,
     search_words varchar(32) NOT NULL DEFAULT '',
-    parent integer NOT NULL DEFAULT 0,
+    parent integer NOT NULL REFERENCES accounts (account_id),
 
     PRIMARY KEY (account_id)
 );
+
+CREATE OR REPLACE FUNCTION set_default_parent() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.parent := NEW.account_id;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER set_default_parent_tg
+BEFORE INSERT OR UPDATE ON accounts
+FOR EACH ROW
+WHEN (NEW.parent = 0 OR NEW.parent IS NULL)
+EXECUTE PROCEDURE set_default_parent();
 
 
 /*
@@ -168,16 +181,27 @@ FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
 GROUP BY ts.month;
 
-CREATE OR REPLACE VIEW bp2_view AS
+CREATE OR REPLACE VIEW pl_view AS
 SELECT ts.month,
-       ac.account_id, ac.account_type, ac.name,
+       ac.account_id, ac.account_type, ac.name, ac.parent,
        SUM(CASE WHEN ac.account_type = TYPE_INCOME THEN accrual_credit_amount - accrual_debit_amount
                 WHEN ac.account_type = TYPE_EXPENSE THEN accrual_debit_amount - accrual_credit_amount
            ELSE 0 END)
        AS balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-GROUP BY ts.month, ac.account_id, ac.account_type, ac.name;
+WHERE ac.account_type = TYPE_INCOME OR ac.account_type = TYPE_EXPENSE
+GROUP BY ts.month, ac.account_id, ac.account_type, ac.name, ac.parent
+HAVING SUM(CASE WHEN ac.account_type = TYPE_INCOME THEN accrual_credit_amount - accrual_debit_amount
+                WHEN ac.account_type = TYPE_EXPENSE THEN accrual_debit_amount - accrual_credit_amount
+           ELSE 0 END) <> 0;
+
+CREATE OR REPLACE VIEW grouped_pl_view AS
+SELECT pl.month, ac.account_id, ac.account_type, ac.name, SUM(pl.balance) AS balance
+FROM pl_view AS pl
+LEFT JOIN accounts AS ac ON pl.parent = ac.account_id
+GROUP BY pl.month, ac.account_id, ac.account_type, ac.name
+HAVING SUM(pl.balance) <> 0;
 
 
 /*
