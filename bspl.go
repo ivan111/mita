@@ -159,7 +159,7 @@ func dbGetBalances(db *sql.DB) ([]summary, error) {
 
 const sqlGetBP = `
 SELECT account_id, account_type, name, balance
-FROM bp2_view
+FROM grouped_pl_view
 WHERE month = $1
 `
 
