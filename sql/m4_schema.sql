@@ -14,6 +14,7 @@ CREATE TABLE accounts (
     name varchar(8) NOT NULL,
     search_words varchar(32) NOT NULL DEFAULT '',
     parent integer NOT NULL REFERENCES accounts (account_id),
+    order_no integer NOT NULL DEFAULT 999,
 
     PRIMARY KEY (account_id)
 );
@@ -194,14 +195,16 @@ WHERE ac.account_type = TYPE_INCOME OR ac.account_type = TYPE_EXPENSE
 GROUP BY ts.month, ac.account_id, ac.account_type, ac.name, ac.parent
 HAVING SUM(CASE WHEN ac.account_type = TYPE_INCOME THEN accrual_credit_amount - accrual_debit_amount
                 WHEN ac.account_type = TYPE_EXPENSE THEN accrual_debit_amount - accrual_credit_amount
-           ELSE 0 END) <> 0;
+           ELSE 0 END) <> 0
+ORDER BY ac.account_type, ac.order_no, ac.account_id;
 
 CREATE OR REPLACE VIEW grouped_pl_view AS
 SELECT pl.month, ac.account_id, ac.account_type, ac.name, SUM(pl.balance) AS balance
 FROM pl_view AS pl
 LEFT JOIN accounts AS ac ON pl.parent = ac.account_id
 GROUP BY pl.month, ac.account_id, ac.account_type, ac.name
-HAVING SUM(pl.balance) <> 0;
+HAVING SUM(pl.balance) <> 0
+ORDER BY ac.account_type, ac.order_no, ac.account_id;
 
 
 /*
@@ -247,7 +250,7 @@ FROM T AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
 WHERE ts.rn = 1 AND
 (ac.account_type = TYPE_ASSET OR ac.account_type = TYPE_LIABILITY)
-ORDER BY ts.account_id;
+ORDER BY ac.account_type, ac.order_no, ts.account_id;
 
 
 /*
