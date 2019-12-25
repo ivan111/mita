@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -356,23 +357,20 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 		return false, nil
 	}
 
-	var nwo []int
+	src := new(bytes.Buffer)
 
-	fmt.Print("新しい順番 (例) 1 2 4 3: ")
-	stdin.Scan()
-
-	for _, s := range strings.Split(stdin.Text(), " ") {
-		v, err := strconv.Atoi(s)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "不正な値")
-			return false, nil
-		}
-
-		nwo = append(nwo, v)
+	for i, d := range tmpl.items {
+		src.Write([]byte(fmt.Sprintf("%d %v\n", i, &d)))
 	}
 
-	if len(nwo) != len(tmpl.items) {
-		fmt.Fprintln(os.Stderr, "長さが一致しない")
+	text, err := scanWithEditor(src.String())
+	if err != nil {
+		return false, err
+	}
+
+	nwo, err := readOrder(text, len(tmpl.items))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		return false, nil
 	}
 
@@ -399,6 +397,49 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func readOrder(text string, numItems int) ([]int, error) {
+	var noArr []int
+
+	for _, line := range strings.Split(text, "\n") {
+		arr := strings.Split(line, " ")
+
+		if len(arr) <= 1 {
+			continue
+		}
+
+		no, err := strconv.Atoi(arr[0])
+		if err != nil {
+			return nil, errors.New("先頭が数値以外の行がある")
+		}
+
+		if no < 0 || no >= numItems {
+			return nil, errors.New("数値が範囲外")
+		}
+
+		noArr = append(noArr, no)
+	}
+
+	if len(noArr) != numItems {
+		return nil, errors.New("長さが一致しない")
+	}
+
+	testArr := make([]int, numItems)
+	copy(testArr, noArr)
+	sort.Ints(testArr)
+	for i, v := range testArr {
+		if i != v {
+			return nil, errors.New("同じ数値が存在する")
+		}
+	}
+
+	nwo := make([]int, numItems)
+	for i, no := range noArr {
+		nwo[no] = i
+	}
+
+	return nwo, nil
 }
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {

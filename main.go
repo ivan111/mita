@@ -7,6 +7,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime"
@@ -217,6 +218,52 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 	}
 
 	return false, err
+}
+
+/* テキストエディタを開いてユーザからテキストを得る
+ */
+func scanWithEditor(text string) (string, error) {
+	f, err := ioutil.TempFile("", "")
+	if err != nil {
+		return "", err
+	}
+
+	filename := f.Name()
+
+	defer os.Remove(filename)
+
+	f.WriteString(text)
+	f.Close()
+
+	if err = openFileInEditor(filename); err != nil {
+		return "", err
+	}
+
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func openFileInEditor(filename string) error {
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vim"
+	}
+
+	executable, err := exec.LookPath(editor)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(executable, filename)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }
 
 func scanInt(prompt string, minValue int, maxValue int) int {
