@@ -8,7 +8,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -383,7 +382,7 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 		if tmpl.items[i].orderNo != nwo[i] {
 			tmpl.items[i].orderNo = nwo[i]
 
-			err = dbReorderTemplateItems(tx, &tmpl.items[i])
+			err = dbReorderTemplateItem(tx, &tmpl.items[i])
 			if err != nil {
 				tx.Rollback()
 				return false, err
@@ -397,49 +396,6 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func readOrder(text string, numItems int) ([]int, error) {
-	var noArr []int
-
-	for _, line := range strings.Split(text, "\n") {
-		arr := strings.Split(line, " ")
-
-		if len(arr) <= 1 {
-			continue
-		}
-
-		no, err := strconv.Atoi(arr[0])
-		if err != nil {
-			return nil, errors.New("先頭が数値以外の行がある")
-		}
-
-		if no < 0 || no >= numItems {
-			return nil, errors.New("数値が範囲外")
-		}
-
-		noArr = append(noArr, no)
-	}
-
-	if len(noArr) != numItems {
-		return nil, errors.New("長さが一致しない")
-	}
-
-	testArr := make([]int, numItems)
-	copy(testArr, noArr)
-	sort.Ints(testArr)
-	for i, v := range testArr {
-		if i != v {
-			return nil, errors.New("同じ数値が存在する")
-		}
-	}
-
-	nwo := make([]int, numItems)
-	for i, no := range noArr {
-		nwo[no] = i
-	}
-
-	return nwo, nil
 }
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
@@ -675,14 +631,14 @@ func dbRemoveTemplateItems(db *sql.DB, id int) error {
 	return err
 }
 
-const sqlReorderTemplateItems = `
+const sqlReorderTemplateItem = `
 UPDATE templates_detail
 SET order_no = $3
 WHERE template_id = $1 AND no = $2
 `
 
-func dbReorderTemplateItems(db dbtx, d *templateDetail) error {
-	_, err := db.Exec(sqlReorderTemplateItems, d.templateID, d.no, d.orderNo)
+func dbReorderTemplateItem(db dbtx, d *templateDetail) error {
+	_, err := db.Exec(sqlReorderTemplateItem, d.templateID, d.no, d.orderNo)
 
 	return err
 }

@@ -176,7 +176,6 @@ const sqlGetGroupedPL = `
 SELECT account_id, account_type, name, balance
 FROM grouped_pl_view
 WHERE month = $1
-ORDER BY account_type, account_id
 `
 
 func dbGetGroupedPL(db *sql.DB, month int) ([]summary, error) {

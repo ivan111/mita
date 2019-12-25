@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
@@ -24,6 +25,7 @@ type account struct {
 	accountType int
 	name        string
 	searchWords string
+	orderNo     int
 	parent      struct {
 		id   int
 		name string
@@ -136,6 +138,150 @@ func confirmRemoveAccount(d *account) bool {
 	return stdin.Text() == "Y"
 }
 
+func cmdReorderAccount(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	parents, err := dbGetAccountsThatHasChildren(db)
+	if err != nil {
+		return err
+	}
+
+	i, err := selectOrderTarget(parents)
+	if err != nil {
+		return err
+	}
+
+	if i == 0 {
+		return nil
+	}
+
+	var accounts []account
+	var startNo int
+
+	switch i {
+	case 1: // 資産
+		accounts, err = dbGetAccountsByType(db, acTypeAsset)
+	case 2: // 負債
+		accounts, err = dbGetAccountsByType(db, acTypeLiability)
+	case 3: // 収入
+		accounts, err = dbGetAccountsByType(db, acTypeIncome)
+	case 4: // 費用
+		accounts, err = dbGetAccountsByType(db, acTypeExpense)
+	default:
+		d := parents[i-5]
+		accounts, err = dbGetAccountChildren(db, d.id)
+		startNo = d.orderNo + 1
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if len(accounts) < 1 {
+		fmt.Fprintln(os.Stderr, "並び替える対象がない")
+		return nil
+	}
+
+	src := new(bytes.Buffer)
+	for i, d := range accounts {
+		src.WriteString(fmt.Sprintf("%d %s\n", i, d.name))
+	}
+
+	text, err := scanWithEditor(src.String())
+	if err != nil {
+		return err
+	}
+
+	nwo, err := readOrder(text, len(accounts))
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(accounts); i++ {
+		nwo[i] += startNo
+
+		if accounts[i].orderNo != nwo[i] {
+			accounts[i].orderNo = nwo[i]
+
+			err = dbReorderAccount(tx, &accounts[i])
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func selectOrderTarget(parents []account) (int, error) {
+	src := new(bytes.Buffer)
+
+	src.WriteString("1 資産 sisan\n")
+	src.WriteString("2 負債 fusai\n")
+	src.WriteString("3 収入 syuunyuu\n")
+	src.WriteString("4 費用 hiyou\n")
+
+	for i, d := range parents {
+		src.WriteString(fmt.Sprintf("%d %s %s\n", 5+i, d.name, d.searchWords))
+	}
+
+	dst := new(bytes.Buffer)
+	args := []string{
+		"--header=並べ替え対象",
+	}
+
+	cancel, err := fzf(src, dst, os.Stderr, args)
+	if cancel {
+		return 0, nil
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	arr := strings.Split(dst.String(), " ")
+
+	i, err := strconv.Atoi(arr[0])
+	if err != nil {
+		return 0, err
+	}
+
+	var name string
+
+	switch i {
+	case 1:
+		name = "資産"
+	case 2:
+		name = "負債"
+	case 3:
+		name = "収入"
+	case 4:
+		name = "費用"
+	default:
+		idx := i - 5
+		if idx >= 0 && idx < len(parents) {
+			name = parents[idx].name
+		} else {
+			return 0, errors.New("out of index")
+		}
+	}
+
+	fmt.Printf("並べ替え対象: %s\n", name)
+
+	return i, nil
+
+}
+
 func confirmAccount(accounts []account, d *account, enableType bool) (bool, error) {
 	for {
 		fmt.Println()
@@ -179,10 +325,10 @@ func confirmAccount(accounts []account, d *account, enableType bool) (bool, erro
 }
 
 const sqlGetAccounts = `
-SELECT ac.account_id, ac.account_type, ac.name, ac.search_words, COALESCE(p.account_id, 0), COALESCE(p.name, '')
+SELECT ac.account_id, ac.account_type, ac.name, ac.search_words, p.account_id, p.name
 FROM accounts ac
 LEFT JOIN accounts AS p ON ac.parent = p.account_id
-ORDER BY account_type, account_id
+ORDER BY ac.account_type, p.order_no, ac.order_no, ac.account_id
 `
 
 func dbGetAccounts(db *sql.DB) ([]account, error) {
@@ -197,6 +343,97 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 		var ac account
 
 		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords, &ac.parent.id, &ac.parent.name); err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, ac)
+	}
+	rows.Close()
+
+	return accounts, nil
+}
+
+const sqlGetAccountsByType = `
+SELECT account_id, name, order_no
+FROM accounts
+WHERE account_type = $1 AND
+      account_id = parent
+ORDER BY order_no, account_id
+`
+
+func dbGetAccountsByType(db *sql.DB, t int) ([]account, error) {
+	rows, err := db.Query(sqlGetAccountsByType, t)
+	if err != nil {
+		return nil, err
+	}
+
+	var accounts []account
+
+	for rows.Next() {
+		var ac account
+
+		if err := rows.Scan(&ac.id, &ac.name, &ac.orderNo); err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, ac)
+	}
+	rows.Close()
+
+	return accounts, nil
+}
+
+const sqlGetAccountsThatHasChildren = `
+SELECT p.account_id, p.account_type, p.name, p.search_words, p.order_no
+FROM accounts ac
+LEFT JOIN accounts AS p ON ac.parent = p.account_id
+GROUP BY p.account_id, p.account_type, p.name, p.search_words, p.order_no
+HAVING COUNT(*) >= 2
+ORDER BY p.account_type, p.order_no, p.account_id
+`
+
+// 2人以上の子を持つ勘定科目を取得
+func dbGetAccountsThatHasChildren(db *sql.DB) ([]account, error) {
+	rows, err := db.Query(sqlGetAccountsThatHasChildren)
+	if err != nil {
+		return nil, err
+	}
+
+	var accounts []account
+
+	for rows.Next() {
+		var ac account
+
+		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords, &ac.orderNo); err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, ac)
+	}
+	rows.Close()
+
+	return accounts, nil
+}
+
+const sqlGetAccountChildren = `
+SELECT account_id, account_type, name, order_no
+FROM accounts ac
+WHERE parent = $1 AND account_id <> parent
+ORDER BY order_no, account_id
+`
+
+func dbGetAccountChildren(db *sql.DB, parentID int) ([]account, error) {
+	rows, err := db.Query(sqlGetAccountChildren, parentID)
+	if err != nil {
+		return nil, err
+	}
+
+	var accounts []account
+
+	for rows.Next() {
+		var ac account
+
+		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.orderNo); err != nil {
 			return nil, err
 		}
 
@@ -241,6 +478,18 @@ WHERE account_id = $1
 
 func dbRemoveAccount(db *sql.DB, id int) error {
 	_, err := db.Exec(sqlRemoveAccount, id)
+
+	return err
+}
+
+const sqlReorderAccount = `
+UPDATE accounts
+SET order_no = $2
+WHERE account_id = $1
+`
+
+func dbReorderAccount(db dbtx, d *account) error {
+	_, err := db.Exec(sqlReorderAccount, d.id, d.orderNo)
 
 	return err
 }

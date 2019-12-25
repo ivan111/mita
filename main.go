@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
@@ -11,7 +12,9 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"unicode/utf8"
@@ -98,6 +101,12 @@ func main() {
 					Aliases: []string{"r"},
 					Usage:   "勘定科目を削除",
 					Action:  cmdRemoveAccount,
+				},
+				{
+					Name:    "order",
+					Aliases: []string{"o"},
+					Usage:   "勘定科目の並べ替え",
+					Action:  cmdReorderAccount,
 				},
 			},
 		},
@@ -264,6 +273,49 @@ func openFileInEditor(filename string) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+func readOrder(text string, numItems int) ([]int, error) {
+	var noArr []int
+
+	for _, line := range strings.Split(text, "\n") {
+		arr := strings.Split(line, " ")
+
+		if len(arr) <= 1 {
+			continue
+		}
+
+		no, err := strconv.Atoi(arr[0])
+		if err != nil {
+			return nil, errors.New("先頭が数値以外の行がある")
+		}
+
+		if no < 0 || no >= numItems {
+			return nil, errors.New("数値が範囲外")
+		}
+
+		noArr = append(noArr, no)
+	}
+
+	if len(noArr) != numItems {
+		return nil, errors.New("長さが一致しない")
+	}
+
+	testArr := make([]int, numItems)
+	copy(testArr, noArr)
+	sort.Ints(testArr)
+	for i, v := range testArr {
+		if i != v {
+			return nil, errors.New("同じ数値が存在する")
+		}
+	}
+
+	nwo := make([]int, numItems)
+	for i, no := range noArr {
+		nwo[no] = i
+	}
+
+	return nwo, nil
 }
 
 func scanInt(prompt string, minValue int, maxValue int) int {
