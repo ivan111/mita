@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -15,7 +16,18 @@ type summary struct {
 }
 
 func (d *summary) String() string {
-	return fmt.Sprintf("%s %s", d.name, int2str(d.balance))
+	src := new(bytes.Buffer)
+
+	nameWidth := getTextWidth(d.name)
+	nw := 16 - nameWidth
+	if nw < 0 {
+		nw = 0
+	}
+	src.WriteString(fmt.Sprintf("%s%*s", d.name, nw, ""))
+
+	src.WriteString(fmt.Sprintf(" %10s", int2str(d.balance)))
+
+	return src.String()
 }
 
 func cmdBS(context *cli.Context) error {
@@ -60,9 +72,9 @@ func cmdBS(context *cli.Context) error {
 	}
 
 	fmt.Println()
-	fmt.Printf("総資産: %s\n", int2str(assetSum))
-	fmt.Printf("総負債: %s\n", int2str(liabilitySum))
-	fmt.Printf("純資産: %s\n", int2str(assetSum-liabilitySum))
+	fmt.Printf("総資産: %19s\n", int2str(assetSum))
+	fmt.Printf("総負債: %19s\n", int2str(liabilitySum))
+	fmt.Printf("純資産: %19s\n", int2str(assetSum-liabilitySum))
 
 	return nil
 }
@@ -132,16 +144,16 @@ func cmdPL(context *cli.Context) error {
 	}
 
 	fmt.Println()
-	fmt.Printf("総収入: %s\n", int2str(incomeSum))
-	fmt.Printf("総費用: %s\n", int2str(expenseSum))
-	fmt.Printf("損益: %s\n", int2str(incomeSum-expenseSum))
+	fmt.Printf("総収入: %19s\n", int2str(incomeSum))
+	fmt.Printf("総費用: %19s\n", int2str(expenseSum))
+	fmt.Printf("損益  : %19s\n", int2str(incomeSum-expenseSum))
 
 	return nil
 }
 
 func printSubItems(items []summary) {
 	for _, d := range items {
-		fmt.Printf("    %v\n", &d)
+		fmt.Printf("        %v\n", &d)
 	}
 }
 

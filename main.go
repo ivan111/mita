@@ -7,6 +7,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
+	"golang.org/x/text/width"
 	"io"
 	"io/ioutil"
 	"os"
@@ -350,4 +351,30 @@ func scanText(prompt string, minLen int, maxLen int) string {
 
 		fmt.Fprintf(os.Stderr, "エラー: 文字数が範囲外 [%d, %d]\n", minLen, maxLen)
 	}
+}
+
+func getTextWidth(s string) int {
+	var w int
+
+	for _, ch := range s {
+		kind := width.LookupRune(ch).Kind()
+
+		if kind == width.EastAsianWide || kind == width.EastAsianFullwidth {
+			w += 2
+		} else {
+			w++
+		}
+	}
+
+	return w
+}
+
+func skipSpace(s string) string {
+	for i, ch := range s {
+		if ch != ' ' {
+			return s[i:]
+		}
+	}
+
+	return ""
 }

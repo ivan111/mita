@@ -7,6 +7,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -494,12 +495,38 @@ func dbReorderAccount(db dbtx, d *account) error {
 	return err
 }
 
-func selectAccount(accounts []account, header string) (*account, error) {
+func getAccountsReader(accounts []account) io.Reader {
 	src := new(bytes.Buffer)
+
+	maxNo := len(accounts) - 1
+	noWidth := len(strconv.Itoa(maxNo))
+
 	for i, ac := range accounts {
-		src.Write([]byte(fmt.Sprintf("%d %s %s (%s)\n", i, ac.name, ac.searchWords, ac.parent.name)))
+		src.WriteString(fmt.Sprintf("%*d", noWidth, i))
+
+		nameWidth := getTextWidth(ac.name)
+		nw := 16 - nameWidth
+		if nw < 0 {
+			nw = 0
+		}
+		src.WriteString(fmt.Sprintf(" %s%*s", ac.name, nw, ""))
+
+		parentWidth := getTextWidth(ac.parent.name)
+		pw := 18 - parentWidth
+		if pw < 0 {
+			pw = 0
+		}
+
+		src.WriteString(fmt.Sprintf(" (%s)%*s", ac.parent.name, pw, ""))
+
+		src.WriteString(fmt.Sprintf(" %s\n", ac.searchWords))
 	}
 
+	return src
+}
+
+func selectAccount(accounts []account, header string) (*account, error) {
+	src := getAccountsReader(accounts)
 	dst := new(bytes.Buffer)
 	args := []string{
 		"--header=" + header,
@@ -514,7 +541,7 @@ func selectAccount(accounts []account, header string) (*account, error) {
 		return nil, err
 	}
 
-	arr := strings.Split(dst.String(), " ")
+	arr := strings.Split(skipSpace(dst.String()), " ")
 
 	i, err := strconv.Atoi(arr[0])
 	if err != nil {

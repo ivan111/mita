@@ -52,8 +52,6 @@ func cmdSearchTransaction(context *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(tr)
-
 	histories, err := dbGetHistory(db, tr.id)
 	if err != nil {
 		return err
@@ -291,13 +289,13 @@ FROM transactions_view
 ORDER BY date DESC, transaction_id DESC
 `
 
-func getTransactionsReader(db *sql.DB) (io.Reader, error) {
+func getTransactions(db *sql.DB) ([]transaction, error) {
 	rows, err := db.Query(sqlGetTransactions)
 	if err != nil {
 		return nil, err
 	}
 
-	reader := new(bytes.Buffer)
+	var transactions []transaction
 
 	for rows.Next() {
 		var tr transaction
@@ -310,13 +308,11 @@ func getTransactionsReader(db *sql.DB) (io.Reader, error) {
 			return nil, err
 		}
 
-		reader.Write([]byte(fmt.Sprintf("%d %s %s %s %s %s %s %s\n",
-			tr.id, tr.date.Format("2006-01-02"), tr.debit.name, tr.credit.name,
-			int2str(tr.amount), tr.note, tr.debit.searchWords, tr.credit.searchWords)))
+		transactions = append(transactions, tr)
 	}
 	rows.Close()
 
-	return reader, nil
+	return transactions, nil
 }
 
 const sqlAddTransaction = `
@@ -377,12 +373,46 @@ func dbRemoveTransaction(db *sql.DB, id int) error {
 	return err
 }
 
+func getTransactionsReader(transactions []transaction) io.Reader {
+	src := new(bytes.Buffer)
+
+	maxNo := len(transactions) - 1
+	noWidth := len(strconv.Itoa(maxNo))
+
+	for i, d := range transactions {
+		src.WriteString(fmt.Sprintf("%*d ", noWidth, i))
+
+		src.WriteString(d.date.Format("2006-01-02"))
+
+		debitWidth := getTextWidth(d.debit.name)
+		dw := 16 - debitWidth
+		if dw < 0 {
+			dw = 0
+		}
+		src.WriteString(fmt.Sprintf(" %s%*s", d.debit.name, dw, ""))
+
+		creditWidth := getTextWidth(d.credit.name)
+		cw := 16 - creditWidth
+		if cw < 0 {
+			cw = 0
+		}
+		src.WriteString(fmt.Sprintf(" %s%*s", d.credit.name, cw, ""))
+
+		src.WriteString(fmt.Sprintf(" %9s %s", int2str(d.amount), d.note))
+
+		src.WriteString(fmt.Sprintf("    %s %s\n", d.debit.searchWords, d.credit.searchWords))
+	}
+
+	return src
+}
+
 func selectTransaction(db *sql.DB) (*transaction, error) {
-	src, err := getTransactionsReader(db)
+	transactions, err := getTransactions(db)
 	if err != nil {
 		return nil, err
 	}
 
+	src := getTransactionsReader(transactions)
 	dst := new(bytes.Buffer)
 	args := []string{}
 
@@ -395,14 +425,18 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 		return nil, err
 	}
 
-	arr := strings.Split(dst.String(), " ")
+	arr := strings.Split(skipSpace(dst.String()), " ")
 
-	v, err := strconv.Atoi(arr[0])
+	i, err := strconv.Atoi(arr[0])
 	if err != nil {
 		return nil, err
 	}
 
-	return dbGetTransaction(db, v)
+	d := transactions[i]
+
+	fmt.Printf("取引: %v\n", &d)
+
+	return &d, nil
 }
 
 func scanTransaction(accounts []account) (*transaction, error) {
