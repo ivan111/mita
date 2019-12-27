@@ -362,9 +362,13 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 		src.Write([]byte(fmt.Sprintf("%d %v\n", i, &d)))
 	}
 
-	text, err := scanWithEditor(src.String())
+	text, cancel, err := scanWithEditor(src.String())
 	if err != nil {
 		return false, err
+	}
+
+	if cancel {
+		return false, nil
 	}
 
 	nwo, err := readOrder(text, len(tmpl.items))

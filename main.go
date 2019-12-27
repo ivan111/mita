@@ -231,11 +231,12 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 }
 
 /* テキストエディタを開いてユーザからテキストを得る
- */
-func scanWithEditor(text string) (string, error) {
+戻り値のboolはcancel
+*/
+func scanWithEditor(text string) (string, bool, error) {
 	f, err := ioutil.TempFile("", "")
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	filename := f.Name()
@@ -245,16 +246,32 @@ func scanWithEditor(text string) (string, error) {
 	f.WriteString(text)
 	f.Close()
 
+	file, err := os.Stat(filename)
+	if err != nil {
+		return "", false, err
+	}
+
+	modTime := file.ModTime()
+
 	if err = openFileInEditor(filename); err != nil {
-		return "", err
+		return "", false, err
+	}
+
+	file, err = os.Stat(filename)
+	if err != nil {
+		return "", false, err
+	}
+
+	if file.ModTime() == modTime {
+		return "", true, nil
 	}
 
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	return string(bytes), nil
+	return string(bytes), false, nil
 }
 
 func openFileInEditor(filename string) error {

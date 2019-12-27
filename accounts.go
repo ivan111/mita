@@ -192,9 +192,13 @@ func cmdReorderAccount(context *cli.Context) error {
 		src.WriteString(fmt.Sprintf("%d %s\n", i, d.name))
 	}
 
-	text, err := scanWithEditor(src.String())
+	text, cancel, err := scanWithEditor(src.String())
 	if err != nil {
 		return err
+	}
+
+	if cancel {
+		return nil
 	}
 
 	nwo, err := readOrder(text, len(accounts))
