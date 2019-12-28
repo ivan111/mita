@@ -122,7 +122,7 @@ func cmdPL(context *cli.Context) error {
 
 		incomeSum += d.balance
 
-		if len(p2d[d.id]) > 1 {
+		if len(p2d[d.id]) > 1 || (len(p2d[d.id]) == 1 && p2d[d.id][0].id != d.id) {
 			printSubItems(p2d[d.id])
 		}
 	}
@@ -138,7 +138,7 @@ func cmdPL(context *cli.Context) error {
 
 		expenseSum += d.balance
 
-		if len(p2d[d.id]) > 1 {
+		if len(p2d[d.id]) > 1 || (len(p2d[d.id]) == 1 && p2d[d.id][0].id != d.id) {
 			printSubItems(p2d[d.id])
 		}
 	}
