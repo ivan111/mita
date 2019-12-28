@@ -157,6 +157,21 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:  "history",
+			Usage: "履歴のオプション",
+			Subcommands: []cli.Command{
+				{
+					Name:    "ls",
+					Aliases: []string{"list"},
+					Usage:   "履歴を一覧",
+					Flags: []cli.Flag{
+						cli.BoolFlag{Name: "all, a"},
+					},
+					Action: cmdListHistory,
+				},
+			},
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {

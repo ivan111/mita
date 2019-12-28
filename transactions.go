@@ -454,6 +454,32 @@ func dbRemoveTransaction(db *sql.DB, id int) error {
 	return err
 }
 
+func tr2alignedString(d *transaction) string {
+	date := d.date.Format("2006-01-02")
+
+	debitWidth := getTextWidth(d.debit.name)
+	dw := 16 - debitWidth
+	if dw < 0 {
+		dw = 0
+	}
+
+	creditWidth := getTextWidth(d.credit.name)
+	cw := 16 - creditWidth
+	if cw < 0 {
+		cw = 0
+	}
+
+	rng := ""
+
+	if d.start != 0 {
+		rng = fmt.Sprintf("[%s, %s]", month2str(d.start), month2str(d.end))
+	}
+
+	return fmt.Sprintf("%s %s%*s %s%*s %9s %18s %s", date,
+		d.debit.name, dw, "", d.credit.name, cw, "",
+		int2str(d.amount), rng, d.note)
+}
+
 func getTransactionsReader(transactions []transaction, showSearchWords bool) io.Reader {
 	src := new(bytes.Buffer)
 
@@ -463,23 +489,7 @@ func getTransactionsReader(transactions []transaction, showSearchWords bool) io.
 	for i, d := range transactions {
 		src.WriteString(fmt.Sprintf("%*d ", noWidth, i))
 
-		src.WriteString(d.date.Format("2006-01-02"))
-
-		debitWidth := getTextWidth(d.debit.name)
-		dw := 16 - debitWidth
-		if dw < 0 {
-			dw = 0
-		}
-		src.WriteString(fmt.Sprintf(" %s%*s", d.debit.name, dw, ""))
-
-		creditWidth := getTextWidth(d.credit.name)
-		cw := 16 - creditWidth
-		if cw < 0 {
-			cw = 0
-		}
-		src.WriteString(fmt.Sprintf(" %s%*s", d.credit.name, cw, ""))
-
-		src.WriteString(fmt.Sprintf(" %9s %s", int2str(d.amount), d.note))
+		src.WriteString(tr2alignedString(&d))
 
 		if showSearchWords {
 			src.WriteString(fmt.Sprintf("    %s %s", d.debit.searchWords, d.credit.searchWords))
