@@ -37,6 +37,25 @@ func (d *account) String() string {
 	return d.name
 }
 
+func cmdListAccount(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	accounts, err := dbGetAccounts(db)
+	if err != nil {
+		return err
+	}
+
+	src := getAccountsReader(accounts)
+
+	fmt.Print(src)
+
+	return nil
+}
+
 func cmdAddAccount(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {

@@ -95,6 +95,12 @@ func main() {
 			Usage:   "勘定科目のオプション",
 			Subcommands: []cli.Command{
 				{
+					Name:    "ls",
+					Aliases: []string{"list"},
+					Usage:   "勘定科目を一覧",
+					Action:  cmdListAccount,
+				},
+				{
 					Name:    "add",
 					Aliases: []string{"a"},
 					Usage:   "勘定科目を追加",
