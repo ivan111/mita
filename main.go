@@ -42,6 +42,15 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:    "ls",
+			Aliases: []string{"list"},
+			Usage:   "取引を一覧",
+			Flags: []cli.Flag{
+				cli.BoolFlag{Name: "all, a"},
+			},
+			Action: cmdListTransaction,
+		},
+		{
 			Name:    "search",
 			Aliases: []string{"s"},
 			Usage:   "取引を検索",

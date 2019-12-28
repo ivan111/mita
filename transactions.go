@@ -40,6 +40,52 @@ func (d *transaction) String() string {
 		int2str(d.amount), d.note, rng)
 }
 
+func cmdListTransaction(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	var transactions []transaction
+
+	if context.Bool("all") {
+		transactions, err = getTransactions(db)
+		if err != nil {
+			return err
+		}
+
+		// reverse
+		for i, j := 0, len(transactions)-1; i < j; i, j = i+1, j-1 {
+			transactions[i], transactions[j] = transactions[j], transactions[i]
+		}
+	} else {
+		monthStr := context.Args().First()
+
+		if monthStr == "" {
+			monthStr = "-0" // 今月
+		}
+
+		ym, err := str2month(monthStr)
+		if err != nil {
+			return err
+		}
+
+		year := ym / 100
+		month := ym % 100
+
+		transactions, err = getTransactionsByMonth(db, year, month)
+		if err != nil {
+			return err
+		}
+	}
+
+	src := getTransactionsReader(transactions, false)
+	fmt.Print(src)
+
+	return nil
+}
+
 func cmdSearchTransaction(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {
@@ -315,6 +361,41 @@ func getTransactions(db *sql.DB) ([]transaction, error) {
 	return transactions, nil
 }
 
+const sqlGetTransactionsByMonth = `
+SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
+       credit, credit_search_words, amount, description, start_month, end_month
+FROM transactions_view
+WHERE EXTRACT(year FROM "date") = $1
+      AND EXTRACT(month FROM "date") = $2
+ORDER BY date, transaction_id
+`
+
+func getTransactionsByMonth(db *sql.DB, year int, month int) ([]transaction, error) {
+	rows, err := db.Query(sqlGetTransactionsByMonth, year, month)
+	if err != nil {
+		return nil, err
+	}
+
+	var transactions []transaction
+
+	for rows.Next() {
+		var tr transaction
+
+		err = rows.Scan(&tr.id, &tr.version, &tr.date,
+			&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
+			&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
+			&tr.amount, &tr.note, &tr.start, &tr.end)
+		if err != nil {
+			return nil, err
+		}
+
+		transactions = append(transactions, tr)
+	}
+	rows.Close()
+
+	return transactions, nil
+}
+
 const sqlAddTransaction = `
 INSERT INTO transactions(date, debit_id, credit_id, amount, description, start_month, end_month)
 VALUES($1, $2, $3, $4, $5, $6, $7)
@@ -373,7 +454,7 @@ func dbRemoveTransaction(db *sql.DB, id int) error {
 	return err
 }
 
-func getTransactionsReader(transactions []transaction) io.Reader {
+func getTransactionsReader(transactions []transaction, showSearchWords bool) io.Reader {
 	src := new(bytes.Buffer)
 
 	maxNo := len(transactions) - 1
@@ -400,7 +481,11 @@ func getTransactionsReader(transactions []transaction) io.Reader {
 
 		src.WriteString(fmt.Sprintf(" %9s %s", int2str(d.amount), d.note))
 
-		src.WriteString(fmt.Sprintf("    %s %s\n", d.debit.searchWords, d.credit.searchWords))
+		if showSearchWords {
+			src.WriteString(fmt.Sprintf("    %s %s", d.debit.searchWords, d.credit.searchWords))
+		}
+
+		src.WriteString("\n")
 	}
 
 	return src
@@ -412,7 +497,7 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 		return nil, err
 	}
 
-	src := getTransactionsReader(transactions)
+	src := getTransactionsReader(transactions, true)
 	dst := new(bytes.Buffer)
 	args := []string{}
 
