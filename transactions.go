@@ -307,46 +307,13 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 	}
 }
 
-const sqlGetTransaction = `
-SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
-       credit, credit_search_words, amount, description, start_month, end_month
-FROM transactions_view
-WHERE transaction_id = $1
-`
-
-func dbGetTransaction(db *sql.DB, id int) (*transaction, error) {
-	var tr transaction
-	err := db.QueryRow(sqlGetTransaction, id).Scan(&tr.id, &tr.version, &tr.date,
-		&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
-		&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
-		&tr.amount, &tr.note, &tr.start, &tr.end)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tr, nil
-
-}
-
-const sqlGetTransactions = `
-SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
-       credit, credit_search_words, amount, description, start_month, end_month
-FROM transactions_view
-ORDER BY date DESC, transaction_id DESC
-`
-
-func getTransactions(db *sql.DB) ([]transaction, error) {
-	rows, err := db.Query(sqlGetTransactions)
-	if err != nil {
-		return nil, err
-	}
-
+func rows2transactions(rows *sql.Rows) ([]transaction, error) {
 	var transactions []transaction
 
 	for rows.Next() {
 		var tr transaction
 
-		err = rows.Scan(&tr.id, &tr.version, &tr.date,
+		err := rows.Scan(&tr.id, &tr.version, &tr.date,
 			&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
 			&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
 			&tr.amount, &tr.note, &tr.start, &tr.end)
@@ -361,9 +328,53 @@ func getTransactions(db *sql.DB) ([]transaction, error) {
 	return transactions, nil
 }
 
+const transactionRows = `
+transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
+credit, credit_search_words, amount, description, start_month, end_month
+`
+
+const sqlGetTransaction = `
+SELECT ` + transactionRows + `
+FROM transactions_view
+WHERE transaction_id = $1
+`
+
+func dbGetTransaction(db *sql.DB, id int) (*transaction, error) {
+	rows, err := db.Query(sqlGetTransaction, id)
+	if err != nil {
+		return nil, err
+	}
+
+	transactions, err := rows2transactions(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(transactions) != 1 {
+		return nil, errors.New("dbGetTransaction: len(transactions) != 1")
+	}
+
+	return &transactions[0], nil
+
+}
+
+const sqlGetTransactions = `
+SELECT ` + transactionRows + `
+FROM transactions_view
+ORDER BY date DESC, transaction_id DESC
+`
+
+func getTransactions(db *sql.DB) ([]transaction, error) {
+	rows, err := db.Query(sqlGetTransactions)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows2transactions(rows)
+}
+
 const sqlGetTransactionsByMonth = `
-SELECT transaction_id, version, date, debit_id, debit, debit_search_words, credit_id,
-       credit, credit_search_words, amount, description, start_month, end_month
+SELECT ` + transactionRows + `
 FROM transactions_view
 WHERE EXTRACT(year FROM "date") = $1
       AND EXTRACT(month FROM "date") = $2
@@ -376,24 +387,7 @@ func getTransactionsByMonth(db *sql.DB, year int, month int) ([]transaction, err
 		return nil, err
 	}
 
-	var transactions []transaction
-
-	for rows.Next() {
-		var tr transaction
-
-		err = rows.Scan(&tr.id, &tr.version, &tr.date,
-			&tr.debit.id, &tr.debit.name, &tr.debit.searchWords,
-			&tr.credit.id, &tr.credit.name, &tr.credit.searchWords,
-			&tr.amount, &tr.note, &tr.start, &tr.end)
-		if err != nil {
-			return nil, err
-		}
-
-		transactions = append(transactions, tr)
-	}
-	rows.Close()
-
-	return transactions, nil
+	return rows2transactions(rows)
 }
 
 const sqlAddTransaction = `
