@@ -269,7 +269,8 @@ SELECT CASE tr.operation
        tr.description, tr.start_month, tr.end_month
 FROM transactions_history AS tr
 LEFT JOIN accounts AS de ON tr.debit_id = de.account_id
-LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id;
+LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id
+ORDER BY tr.operate_time;
 
 
 /*
