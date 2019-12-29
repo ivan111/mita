@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
 	"errors"
@@ -247,6 +248,126 @@ func cmdReorderAccount(context *cli.Context) error {
 	return tx.Commit()
 }
 
+func cmdImportAccounts(context *cli.Context) error {
+	filename := context.Args().First()
+	if filename == "" {
+		return errors.New("引数にファイル名がない")
+	}
+
+	_, err := os.Stat(filename)
+	if err != nil {
+		return errors.New("ファイルが見つからない:" + filename)
+	}
+
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return addAccountsFromFile(db, filename)
+}
+
+func addAccountsFromFile(db *sql.DB, filename string) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	accounts, err := dbGetAccounts(db)
+	if err != nil {
+		return err
+	}
+
+	name2id := make(map[string]int)
+
+	for _, d := range accounts {
+		name2id[d.name] = d.id
+	}
+
+	scanner := bufio.NewScanner(f)
+
+	lineNo := 0
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	for scanner.Scan() {
+		lineNo++
+
+		line := skipSpace(scanner.Text())
+
+		if line == "" || line[0] == '#' {
+			continue
+		}
+
+		arr := strings.Split(line, "\t")
+
+		if len(arr) != 4 {
+			tx.Rollback()
+			return errors.New(fmt.Sprintf("1行に項目が4つない。行:%d", lineNo))
+		}
+
+		d, err := arr2account(arr)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if arr[3] != "" {
+			parentID := name2id[arr[3]]
+			if parentID == 0 {
+				tx.Rollback()
+				return errors.New(fmt.Sprintf("存在しない親'%s'。行:%d", arr[3], lineNo))
+			}
+
+			d.parent.id = parentID
+		}
+
+		id, err := dbAddAccount(tx, d)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		name2id[d.name] = id
+	}
+
+	if err = scanner.Err(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func arr2account(arr []string) (*account, error) {
+	var d account
+
+	switch arr[0] {
+	case "資産", "1":
+		d.accountType = acTypeAsset
+	case "負債", "2":
+		d.accountType = acTypeLiability
+	case "収入", "3":
+		d.accountType = acTypeIncome
+	case "費用", "4":
+		d.accountType = acTypeExpense
+	case "その他", "5":
+		d.accountType = acTypeOther
+	default:
+		return nil, errors.New("不明なタイプ:" + arr[0])
+	}
+
+	d.name = arr[1]
+	d.searchWords = arr[2]
+
+	return &d, nil
+}
+
 func selectOrderTarget(parents []account) (int, error) {
 	src := new(bytes.Buffer)
 
@@ -474,9 +595,17 @@ VALUES($1, $2, $3, $4)
 RETURNING account_id
 `
 
-func dbAddAccount(db dbtx, d *account) (string, error) {
-	var id string
-	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords, d.parent.id).Scan(&id)
+func dbAddAccount(db dbtx, d *account) (int, error) {
+	var idStr string
+	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords, d.parent.id).Scan(&idStr)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return 0, err
+	}
 
 	return id, err
 }

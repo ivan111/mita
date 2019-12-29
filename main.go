@@ -135,6 +135,11 @@ func main() {
 					Usage:   "勘定科目の並べ替え",
 					Action:  cmdReorderAccount,
 				},
+				{
+					Name:   "import",
+					Usage:  "勘定科目のインポート",
+					Action: cmdImportAccounts,
+				},
 			},
 		},
 		{
@@ -205,7 +210,7 @@ func connectDB() (*sql.DB, error) {
 	}
 
 	if runtime.GOOS != "windows" {
-		if _, err := os.Stat(pgDomain); os.IsNotExist(err) == false {
+		if _, err := os.Stat(pgDomain); err == nil {
 			/* peer認証で接続するために、hostを指定して
 			   UNIXドメインで接続してみる */
 			db, err := sql.Open("postgres",
