@@ -85,6 +85,17 @@ func main() {
 			Action: cmdPL,
 		},
 		{
+			Name:  "server",
+			Usage: "グラフサイトを表示するHTTPサーバを起動",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "port, p",
+					Value: 5001,
+				},
+			},
+			Action: cmdServer,
+		},
+		{
 			Name:   "undo",
 			Usage:  "取引への操作を元に戻す",
 			Action: cmdUndoTransaction,

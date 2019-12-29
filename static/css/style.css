@@ -1,0 +1,12 @@
+body {
+    margin: 2%;
+}
+
+.axis text {
+    font-size: 12px;
+}
+
+.tick line {
+    stroke: gray;
+    stroke-width: 1;
+}
