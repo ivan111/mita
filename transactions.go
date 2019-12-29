@@ -553,7 +553,8 @@ func scanTransaction(accounts []account) (*transaction, error) {
 
 	tr.amount = scanAmount()
 	tr.note = scanNote()
-	tr.start, tr.end = scanRange()
+	// 期間はあまり設定しないのでコメントアウト
+	// tr.start, tr.end = scanRange()
 
 	return &tr, nil
 }
