@@ -11,7 +11,7 @@ m4_define(NUM_OF_RECENT_ROWS, 30)m4_dnl  -- 最近の取引ビューの行数
 CREATE TABLE accounts (
     account_id SERIAL,
     account_type integer NOT NULL CHECK(account_type BETWEEN 1 AND 5),
-    name varchar(8) NOT NULL,
+    name varchar(8) NOT NULL UNIQUE,
     search_words varchar(32) NOT NULL DEFAULT '',
     parent integer NOT NULL REFERENCES accounts (account_id),
     order_no integer NOT NULL DEFAULT 999,
