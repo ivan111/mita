@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
 	"golang.org/x/text/width"
@@ -12,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -21,16 +23,39 @@ import (
 	"unicode/utf8"
 )
 
+const appName = "mita-cli"
 const version = "0.2.0"
 
-const dbname = "mita"
+const defaultDBName = "mita"
+const defaultPort = 5001
+
+type config struct {
+	DB struct {
+		Name     string
+		User     string
+		Password string
+	} `toml:"Database"`
+	Server struct {
+		Port int
+	}
+}
+
+var configData *config
 
 var stdin = bufio.NewScanner(os.Stdin)
 
 func main() {
-	_, err := exec.LookPath("fzf")
+	var err error
+
+	configData, err = loadOrCreateConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "実行ファイル'fzf'が見つからない\n")
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	_, err = exec.LookPath("fzf")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "実行ファイル'fzf'が見つからない")
 		return
 	}
 
@@ -90,7 +115,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "port, p",
-					Value: 5001,
+					Value: configData.Server.Port,
 				},
 			},
 			Action: cmdServer,
@@ -195,6 +220,60 @@ func main() {
 	}
 }
 
+func loadOrCreateConfig() (*config, error) {
+	configDir := getConfigDir()
+
+	if _, err := os.Stat(configDir); err != nil {
+		if err := os.MkdirAll(configDir, 0777); err != nil {
+			return nil, err
+		}
+	}
+
+	filename := filepath.Join(configDir, "config.toml")
+
+	var conf config
+
+	if _, err := os.Stat(filename); err == nil {
+		if _, err := toml.DecodeFile(filename, &conf); err != nil {
+			return nil, err
+		}
+	} else {
+		f, err := os.Create(filename)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		if err := toml.NewEncoder(f).Encode(conf); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+
+	if conf.DB.Name == "" {
+		conf.DB.Name = defaultDBName
+	}
+
+	if conf.Server.Port == 0 {
+		conf.Server.Port = defaultPort
+	}
+
+	return &conf, nil
+}
+
+func getConfigDir() string {
+	home := os.Getenv("HOME")
+
+	var configDir string
+
+	if home == "" && runtime.GOOS == "windows" {
+		configDir = filepath.Join(os.Getenv("APPDATA"), appName)
+	} else {
+		configDir = filepath.Join(home, ".config", appName)
+	}
+
+	return configDir
+}
+
 type dbtx interface {
 	QueryRow(string, ...interface{}) *sql.Row
 	Exec(string, ...interface{}) (sql.Result, error)
@@ -203,7 +282,7 @@ type dbtx interface {
 const pgDomain = "/var/run/postgresql/"
 
 func connectDB() (*sql.DB, error) {
-	name := dbname
+	name := configData.DB.Name
 
 	if s := os.Getenv("MITA_DB"); s != "" {
 		name = s
@@ -221,7 +300,18 @@ func connectDB() (*sql.DB, error) {
 		}
 	}
 
-	return sql.Open("postgres", fmt.Sprintf("dbname=%s sslmode=disable", name))
+	var dataSrcName string
+
+	user := configData.DB.User
+	password := configData.DB.Password
+
+	if user != "" {
+		dataSrcName = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", user, password, name)
+	} else {
+		dataSrcName = fmt.Sprintf("dbname=%s sslmode=disable", name)
+	}
+
+	return sql.Open("postgres", dataSrcName)
 }
 
 func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, error) {
