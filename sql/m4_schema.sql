@@ -180,7 +180,8 @@ SELECT ts.month,
        AS balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-GROUP BY ts.month;
+GROUP BY ts.month
+ORDER BY ts.month;
 
 CREATE OR REPLACE VIEW pl_view AS
 SELECT ts.month,
