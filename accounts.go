@@ -527,6 +527,14 @@ func getAccountsReader(accounts []account) io.Reader {
 	for i, ac := range accounts {
 		src.WriteString(fmt.Sprintf("%*d", noWidth, i))
 
+		typeStr := acType2str(ac.accountType)
+		typeWidth := getTextWidth(typeStr)
+		tw := 6 - typeWidth
+		if tw < 0 {
+			tw = 0
+		}
+		src.WriteString(fmt.Sprintf(" %s%*s", typeStr, tw, ""))
+
 		nameWidth := getTextWidth(ac.name)
 		nw := 16 - nameWidth
 		if nw < 0 {
