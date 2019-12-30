@@ -31,13 +31,13 @@ const defaultPort = 5001
 
 type config struct {
 	DB struct {
-		Name     string
-		User     string
-		Password string
-	} `toml:"Database"`
+		Name     string `toml:"name"`
+		User     string `toml:"user"`
+		Password string `toml:"password"`
+	} `toml:"database"`
 	Server struct {
-		Port int
-	}
+		Port int `toml:"port"`
+	} `toml:"server"`
 }
 
 var configData *config
