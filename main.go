@@ -104,6 +104,11 @@ func main() {
 					Usage:   "取引を削除",
 					Action:  cmdRemoveTransaction,
 				},
+				{
+					Name:   "import",
+					Usage:  "取引のインポート",
+					Action: cmdImportTransactions,
+				},
 			},
 		},
 		{

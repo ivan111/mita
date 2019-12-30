@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
 	"errors"
@@ -285,6 +286,93 @@ func confirmUndoTransaction(d *history) bool {
 	fmt.Print("本当にUNDOする? (Y/[no]): ")
 	stdin.Scan()
 	return stdin.Text() == "Y"
+}
+
+func cmdImportTransactions(context *cli.Context) error {
+	var f io.Reader
+	filename := context.Args().First()
+	if filename == "" {
+		f = os.Stdin
+	} else {
+		_, err := os.Stat(filename)
+		if err != nil {
+			return errors.New("ファイルが見つからない:" + filename)
+		}
+
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f = file
+	}
+
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return addTransactionsFromReader(db, f)
+}
+
+func addTransactionsFromReader(db *sql.DB, f io.Reader) error {
+	accounts, err := dbGetAccounts(db)
+	if err != nil {
+		return err
+	}
+
+	name2id := make(map[string]int)
+
+	for _, d := range accounts {
+		name2id[d.name] = d.id
+	}
+
+	scanner := bufio.NewScanner(f)
+
+	lineNo := 0
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	for scanner.Scan() {
+		lineNo++
+
+		line := skipSpace(scanner.Text())
+
+		if line == "" || line[0] == '#' {
+			continue
+		}
+
+		arr := strings.Split(line, "\t")
+
+		if !(len(arr) == 4 || len(arr) == 5 || len(arr) == 7) {
+			tx.Rollback()
+			return fmt.Errorf("%d:1行の項目数が4, 5, 7でない", lineNo)
+		}
+
+		d, err := arr2transaction(name2id, arr)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("%d:%s", lineNo, err)
+		}
+
+		_, err = dbAddTransaction(tx, d)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err = scanner.Err(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
