@@ -85,7 +85,7 @@ func cmdListTemplates(context *cli.Context) error {
 				cw = 0
 			}
 
-			fmt.Printf("%*d %s%*s %s%*s %s%*s %9s %s\n",
+			printf("%*d %s%*s %s%*s %s%*s %9s %s\n",
 				noWidth, i,
 				name, nw, "",
 				d.debit.name, dw, "",
@@ -157,18 +157,17 @@ func editTemplate(db *sql.DB, tmpl *template) error {
 		}
 	}
 
-	fmt.Println()
+	println()
 	for i, d := range tmpl.items {
-		fmt.Println(i, &d)
+		println(i, &d)
 	}
 
 	var a string
 	if len(tmpl.items) == 0 {
 		a = "add"
 	} else {
-		fmt.Print(q)
-		stdin.Scan()
-		a = strings.ToLower(stdin.Text())
+		print(q)
+		a = strings.ToLower(input())
 	}
 
 	for a != "q" {
@@ -260,18 +259,17 @@ func editTemplate(db *sql.DB, tmpl *template) error {
 			tmpl.items = items
 		}
 
-		fmt.Println()
+		println()
 		for i, d := range tmpl.items {
-			fmt.Println(i, &d)
+			println(i, &d)
 		}
 
 		if len(tmpl.items) == 0 {
 			q = "a(dd), q(uit): "
 		}
 
-		fmt.Print(q)
-		stdin.Scan()
-		a = strings.ToLower(stdin.Text())
+		print(q)
+		a = strings.ToLower(input())
 	}
 
 	return nil
@@ -306,9 +304,7 @@ func cmdRemoveTemplate(context *cli.Context) error {
 		return err
 	}
 
-	ok := confirmRemoveTemplate(tmpl)
-
-	if ok {
+	if confirmYesNo("本当に削除する?") {
 		tx, err := db.Begin()
 		if err != nil {
 			return err
@@ -327,23 +323,9 @@ func cmdRemoveTemplate(context *cli.Context) error {
 		}
 
 		err = tx.Commit()
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("削除完了")
-	} else {
-		fmt.Println("キャンセルした")
 	}
 
-	return nil
-}
-
-func confirmRemoveTemplate(tmpl *template) bool {
-	fmt.Println(tmpl)
-	fmt.Print("本当に削除する? (Y/[no]): ")
-	stdin.Scan()
-	return stdin.Text() == "Y"
+	return err
 }
 
 func cmdUseTemplate(context *cli.Context) error {
@@ -377,7 +359,7 @@ func cmdUseTemplate(context *cli.Context) error {
 		trs[i].note = d.note
 
 		if d.amount == 0 {
-			fmt.Println(&d)
+			println(&d)
 			trs[i].amount = scanAmount()
 		}
 
@@ -414,7 +396,7 @@ func cmdUseTemplate(context *cli.Context) error {
 
 func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	if len(tmpl.items) == 0 {
-		fmt.Fprintln(os.Stderr, "テンプレートの中身がない")
+		eprintln("テンプレートの中身がない")
 		return false, nil
 	}
 
@@ -435,7 +417,7 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 
 	nwo, err := readOrder(text, len(tmpl.items))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return false, nil
 	}
 
@@ -605,12 +587,11 @@ func writeTemplates(db *sql.DB, f io.Writer) error {
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
 	for {
-		fmt.Println()
-		fmt.Println(d)
+		println()
+		println(d)
 
-		fmt.Print("y(es), l(eft), r(ight), a(mount), n(ote), q(uit): ")
-		stdin.Scan()
-		a := strings.ToLower(stdin.Text())
+		print("y(es), l(eft), r(ight), a(mount), n(ote), q(uit): ")
+		a := strings.ToLower(input())
 
 		switch a {
 		case "q", "quit":
@@ -645,14 +626,13 @@ func confirmUseTemplate(accounts []account, trs []transaction) (bool, error) {
 	q := fmt.Sprintf("y(es), d(ate), %s, q(uit): ", getRangeString(len(trs)))
 
 	for {
-		fmt.Println()
+		println()
 		for i, tr := range trs {
-			fmt.Println(i, &tr)
+			println(i, &tr)
 		}
 
-		fmt.Print(q)
-		stdin.Scan()
-		a := strings.ToLower(stdin.Text())
+		print(q)
+		a := strings.ToLower(input())
 
 		switch a {
 		case "q", "quit":
@@ -670,7 +650,7 @@ func confirmUseTemplate(accounts []account, trs []transaction) (bool, error) {
 				tr := trs[no]
 				ok, err := confirmTransaction(accounts, &tr)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+					eprintln(err)
 				}
 
 				if err == nil && ok {
@@ -909,7 +889,7 @@ func selectTemplate(db *sql.DB) (*template, error) {
 
 	tmpl.items = items
 
-	fmt.Printf("テンプレート: %s\n", tmpl.name)
+	println("テンプレート:", tmpl.name)
 
 	return tmpl, nil
 }

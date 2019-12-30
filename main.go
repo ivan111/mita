@@ -30,32 +30,46 @@ const defaultDBName = "mita"
 const defaultPort = 5001
 
 type config struct {
-	DB struct {
-		Name     string `toml:"name"`
-		User     string `toml:"user"`
-		Password string `toml:"password"`
-	} `toml:"database"`
-	Server struct {
-		Port int `toml:"port"`
-	} `toml:"server"`
+	DB     database `toml:"database"`
+	Server server   `toml:"server"`
 }
 
-var configData *config
+type database struct {
+	Name     string `toml:"name"`
+	User     string `toml:"user"`
+	Password string `toml:"password"`
+}
 
-var stdin = bufio.NewScanner(os.Stdin)
+type server struct {
+	Port int `toml:"port"`
+}
+
+var configData = config{
+	database{
+		Name:     defaultDBName,
+		User:     "",
+		Password: "",
+	},
+	server{
+		Port: defaultPort,
+	},
+}
+
+var scanner = bufio.NewScanner(os.Stdin)
+var stdin io.Reader = os.Stdin
+var stdout io.Writer = os.Stdout
+var stderr io.Writer = os.Stderr
 
 func main() {
-	var err error
-
-	configData, err = loadOrCreateConfig()
+	err := loadOrCreateConfig()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
 	_, err = exec.LookPath("fzf")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "実行ファイル'fzf'が見つからない")
+		eprintln("実行ファイル'fzf'が見つからない")
 		return
 	}
 
@@ -254,37 +268,37 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, "エラー:", err)
+		eprintln("エラー:", err)
 		os.Exit(1)
 	}
 }
 
-func loadOrCreateConfig() (*config, error) {
+func loadOrCreateConfig() error {
 	configDir := getConfigDir()
 
 	if _, err := os.Stat(configDir); err != nil {
 		if err := os.MkdirAll(configDir, 0777); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	filename := filepath.Join(configDir, "config.toml")
 
-	var conf config
+	conf := &configData
 
 	if _, err := os.Stat(filename); err == nil {
 		if _, err := toml.DecodeFile(filename, &conf); err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		f, err := os.Create(filename)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer f.Close()
 
 		if err := toml.NewEncoder(f).Encode(conf); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintln(err)
 		}
 	}
 
@@ -296,7 +310,7 @@ func loadOrCreateConfig() (*config, error) {
 		conf.Server.Port = defaultPort
 	}
 
-	return &conf, nil
+	return nil
 }
 
 func getConfigDir() string {
@@ -374,7 +388,7 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 		if e, ok := err.(*os.PathError); ok && e.Err == syscall.EPIPE {
 			// ignore EPIPE
 		} else if err != nil {
-			fmt.Fprintln(os.Stderr, "エラー: fzfの標準入力への書き込みに失敗", err)
+			eprintln("エラー: fzfの標準入力への書き込みに失敗", err)
 		}
 
 		stdin.Close()
@@ -511,11 +525,21 @@ func readOrder(text string, numItems int) ([]int, error) {
 	return nwo, nil
 }
 
+func confirmYesNo(msg string) bool {
+	print(msg, " (y[es]/[no]): ")
+	ans := strings.ToLower(input())
+	return ans == "y" || ans == "yes"
+}
+
+func input() string {
+	scanner.Scan()
+	return scanner.Text()
+}
+
 func scanInt(prompt string, minValue int, maxValue int) int {
 	for {
-		fmt.Printf("%s: ", prompt)
-		stdin.Scan()
-		text := stdin.Text()
+		print(prompt + ": ")
+		text := input()
 		v, err := strconv.Atoi(text)
 
 		if v >= minValue && v <= maxValue {
@@ -523,25 +547,24 @@ func scanInt(prompt string, minValue int, maxValue int) int {
 		}
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "エラー: 数値を入力してください")
+			eprintln("エラー: 数値を入力してください")
 		} else {
-			fmt.Fprintf(os.Stderr, "エラー: 値が範囲外 [%d, %d]\n", minValue, maxValue)
+			eprintf("エラー: 値が範囲外 [%d, %d]\n", minValue, maxValue)
 		}
 	}
 }
 
 func scanText(prompt string, minLen int, maxLen int) string {
 	for {
-		fmt.Printf("%s: ", prompt)
-		stdin.Scan()
-		text := stdin.Text()
+		print(prompt + ": ")
+		text := input()
 		textLen := utf8.RuneCountInString(text)
 
 		if textLen >= minLen && textLen <= maxLen {
 			return text
 		}
 
-		fmt.Fprintf(os.Stderr, "エラー: 文字数が範囲外 [%d, %d]\n", minLen, maxLen)
+		eprintf("エラー: 文字数が範囲外 [%d, %d]\n", minLen, maxLen)
 	}
 }
 
@@ -627,4 +650,24 @@ func exportItems(filename string, fn func(*sql.DB, io.Writer) error) error {
 	defer db.Close()
 
 	return fn(db, f)
+}
+
+func eprintln(a ...interface{}) (int, error) {
+	return fmt.Fprintln(stderr, a...)
+}
+
+func eprintf(format string, a ...interface{}) (int, error) {
+	return fmt.Fprintf(stderr, format, a...)
+}
+
+func println(a ...interface{}) (int, error) {
+	return fmt.Fprintln(stdout, a...)
+}
+
+func printf(format string, a ...interface{}) (int, error) {
+	return fmt.Fprintf(stdout, format, a...)
+}
+
+func print(a ...interface{}) (int, error) {
+	return fmt.Fprint(stdout, a...)
 }

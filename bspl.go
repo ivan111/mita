@@ -44,37 +44,37 @@ func cmdBS(context *cli.Context) error {
 
 	var assetSum, liabilitySum int
 
-	fmt.Println("資産:")
+	println("資産:")
 	for _, d := range items {
 		if d.accountType != acTypeAsset {
 			continue
 		}
 
 		if d.balance != 0 {
-			fmt.Println(&d)
+			println(&d)
 
 			assetSum += d.balance
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("負債:")
+	println()
+	println("負債:")
 	for _, d := range items {
 		if d.accountType != acTypeLiability {
 			continue
 		}
 
 		if d.balance != 0 {
-			fmt.Println(&d)
+			println(&d)
 
 			liabilitySum += d.balance
 		}
 	}
 
-	fmt.Println()
-	fmt.Printf("総資産: %19s\n", int2str(assetSum))
-	fmt.Printf("総負債: %19s\n", int2str(liabilitySum))
-	fmt.Printf("純資産: %19s\n", int2str(assetSum-liabilitySum))
+	println()
+	printf("総資産: %19s\n", int2str(assetSum))
+	printf("総負債: %19s\n", int2str(liabilitySum))
+	printf("純資産: %19s\n", int2str(assetSum-liabilitySum))
 
 	return nil
 }
@@ -91,8 +91,8 @@ func cmdPL(context *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(month2str(month))
-	fmt.Println()
+	println(month2str(month))
+	println()
 
 	db, err := connectDB()
 	if err != nil {
@@ -112,13 +112,13 @@ func cmdPL(context *cli.Context) error {
 
 	var incomeSum, expenseSum int
 
-	fmt.Println("収入:")
+	println("収入:")
 	for _, d := range items {
 		if d.accountType != acTypeIncome {
 			continue
 		}
 
-		fmt.Println(&d)
+		println(&d)
 
 		incomeSum += d.balance
 
@@ -127,14 +127,14 @@ func cmdPL(context *cli.Context) error {
 		}
 	}
 
-	fmt.Println()
-	fmt.Println("費用:")
+	println()
+	println("費用:")
 	for _, d := range items {
 		if d.accountType != acTypeExpense {
 			continue
 		}
 
-		fmt.Println(&d)
+		println(&d)
 
 		expenseSum += d.balance
 
@@ -143,17 +143,17 @@ func cmdPL(context *cli.Context) error {
 		}
 	}
 
-	fmt.Println()
-	fmt.Printf("総収入: %19s\n", int2str(incomeSum))
-	fmt.Printf("総費用: %19s\n", int2str(expenseSum))
-	fmt.Printf("損益  : %19s\n", int2str(incomeSum-expenseSum))
+	println()
+	printf("総収入: %19s\n", int2str(incomeSum))
+	printf("総費用: %19s\n", int2str(expenseSum))
+	printf("損益  : %19s\n", int2str(incomeSum-expenseSum))
 
 	return nil
 }
 
 func printSubItems(items []summary) {
 	for _, d := range items {
-		fmt.Printf("        %v\n", &d)
+		printf("        %v\n", &d)
 	}
 }
 

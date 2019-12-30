@@ -77,7 +77,7 @@ func cmdListTransactions(context *cli.Context) error {
 	}
 
 	src := getTransactionsReader(transactions, false)
-	fmt.Print(src)
+	print(src)
 
 	return nil
 }
@@ -99,11 +99,11 @@ func cmdSearchTransaction(context *cli.Context) error {
 		return err
 	}
 
-	fmt.Println()
-	fmt.Println("履歴:")
+	println()
+	println("履歴:")
 
 	for _, d := range histories {
-		fmt.Println(&d)
+		println(&d)
 	}
 
 	return nil
@@ -208,26 +208,11 @@ func cmdRemoveTransaction(context *cli.Context) error {
 		return err
 	}
 
-	ok := confirmRemoveTransaction(tr)
-	if ok {
-		err := dbRemoveTransaction(db, tr.id)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("削除完了")
-	} else {
-		fmt.Println("キャンセルした")
+	if confirmYesNo("本当に削除する?") {
+		err = dbRemoveTransaction(db, tr.id)
 	}
 
-	return nil
-}
-
-func confirmRemoveTransaction(tr *transaction) bool {
-	fmt.Println(tr)
-	fmt.Print("本当に削除する? (Y/[no]): ")
-	stdin.Scan()
-	return stdin.Text() == "Y"
+	return err
 }
 
 func cmdUndoTransaction(context *cli.Context) error {
@@ -245,8 +230,7 @@ func cmdUndoTransaction(context *cli.Context) error {
 		return nil
 	}
 
-	ok := confirmUndoTransaction(d)
-	if ok {
+	if confirmYesNo("本当にUNDOする? ") {
 		switch d.operation {
 		case "DELETE":
 			err = dbAddTransactionForUndo(db, d)
@@ -258,29 +242,14 @@ func cmdUndoTransaction(context *cli.Context) error {
 
 			err = dbEditTransaction(db, &prev.tr)
 			if err == nil {
-				fmt.Println(&prev.tr)
+				println(&prev.tr)
 			}
 		case "INSERT":
 			err = dbRemoveTransaction(db, d.tr.id)
 		}
-
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("UNDO完了")
-	} else {
-		fmt.Println("キャンセルした")
 	}
 
-	return nil
-}
-
-func confirmUndoTransaction(d *history) bool {
-	fmt.Println(d)
-	fmt.Print("本当にUNDOする? (Y/[no]): ")
-	stdin.Scan()
-	return stdin.Text() == "Y"
+	return err
 }
 
 func cmdImportTransactions(context *cli.Context) error {
@@ -420,12 +389,11 @@ func writeTransactions(db *sql.DB, f io.Writer) error {
 
 func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 	for {
-		fmt.Println()
-		fmt.Println(tr)
+		println()
+		println(tr)
 
-		fmt.Print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
-		stdin.Scan()
-		a := strings.ToLower(stdin.Text())
+		print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
+		a := strings.ToLower(input())
 
 		switch a {
 		case "q", "quit":
@@ -682,7 +650,7 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 
 	d := transactions[i]
 
-	fmt.Printf("取引: %v\n", &d)
+	println("取引:", &d)
 
 	return &d, nil
 }
@@ -720,13 +688,11 @@ func scanTransaction(accounts []account) (*transaction, error) {
 
 func scanDate() time.Time {
 	for {
-		fmt.Print("日付: ")
-		stdin.Scan()
-		text := stdin.Text()
-		date, err := str2date(text)
+		print("日付: ")
+		date, err := str2date(input())
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintln(err)
 		} else {
 			return date
 		}
@@ -743,11 +709,9 @@ func scanNote() string {
 }
 
 func scanMonth(name string) (int, error) {
-	fmt.Print(name + ": ")
-	stdin.Scan()
-	text := stdin.Text()
+	print(name + ": ")
 
-	return str2month(text)
+	return str2month(input())
 }
 
 func scanRange() (int, int) {
@@ -758,7 +722,7 @@ func scanRange() (int, int) {
 		start, err = scanMonth("開始月")
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintln(err)
 		} else {
 			break
 		}
@@ -772,9 +736,9 @@ func scanRange() (int, int) {
 		end, err = scanMonth("終了月")
 
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintln(err)
 		} else if start > end {
-			fmt.Fprintln(os.Stderr, "開始月 <= 終了月")
+			eprintln("開始月 <= 終了月")
 		} else {
 			break
 		}

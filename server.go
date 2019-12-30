@@ -11,7 +11,6 @@ import (
 	"github.com/rakyll/statik/fs"
 	"github.com/urfave/cli"
 	"net/http"
-	"os"
 )
 
 func cmdServer(context *cli.Context) error {
@@ -22,7 +21,7 @@ func cmdServer(context *cli.Context) error {
 	http.HandleFunc("/api/pl", apiPLHandler)
 
 	port := context.Int("port")
-	fmt.Printf("Running on http://localhost:%d/ (Press CTRL+C to quit)\n", port)
+	printf("Running on http://localhost:%d/ (Press CTRL+C to quit)\n", port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 }
 
@@ -34,21 +33,21 @@ type apiBP struct {
 func apiBPHandler(w http.ResponseWriter, r *http.Request) {
 	db, err := connectDB()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 	defer db.Close()
 
 	data, err := dbGetBP(db)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
 	w.Header().Set("Content-type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 	}
 }
 
@@ -63,32 +62,32 @@ type apiPL struct {
 func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 	db, err := connectDB()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 	defer db.Close()
 
 	incomeKeys, err := getAccountTypeKeys(db, acTypeIncome)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
 	expenseKeys, err := getAccountTypeKeys(db, acTypeExpense)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
 	income, err := getPLAmountMap(db, incomeKeys)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
 	expense, err := getPLAmountMap(db, expenseKeys)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 		return
 	}
 
@@ -102,7 +101,7 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintln(err)
 	}
 }
 

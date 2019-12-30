@@ -52,7 +52,7 @@ func cmdListAccounts(context *cli.Context) error {
 
 	src := getAccountsReader(accounts)
 
-	fmt.Print(src)
+	print(src)
 
 	return nil
 }
@@ -158,27 +158,12 @@ func cmdRemoveAccount(context *cli.Context) error {
 		return err
 	}
 
-	ok := confirmRemoveAccount(d)
-	if ok {
+	if confirmYesNo("本当に削除する?") {
 		// 使用されてる勘定科目の場合はエラーになる
-		err := dbRemoveAccount(db, d.id)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("削除完了")
-	} else {
-		fmt.Println("キャンセルした")
+		err = dbRemoveAccount(db, d.id)
 	}
 
-	return nil
-}
-
-func confirmRemoveAccount(d *account) bool {
-	fmt.Println(d)
-	fmt.Print("本当に削除する? (Y/[no]): ")
-	stdin.Scan()
-	return stdin.Text() == "Y"
+	return err
 }
 
 func cmdReorderAccount(context *cli.Context) error {
@@ -225,7 +210,7 @@ func cmdReorderAccount(context *cli.Context) error {
 	}
 
 	if len(accounts) < 1 {
-		fmt.Fprintln(os.Stderr, "並び替える対象がない")
+		eprintln("並び替える対象がない")
 		return nil
 	}
 
@@ -453,7 +438,7 @@ func selectOrderTarget(parents []account) (int, error) {
 		}
 	}
 
-	fmt.Printf("並べ替え対象: %s\n", name)
+	println("並べ替え対象:", name)
 
 	return i, nil
 
@@ -461,16 +446,14 @@ func selectOrderTarget(parents []account) (int, error) {
 
 func confirmAccount(accounts []account, d *account, enableType bool) (bool, error) {
 	for {
-		fmt.Println()
-		fmt.Printf("%s %s %s (%s)\n", acType2str(d.accountType), d.name, d.searchWords, d.parent.name)
+		printf("\n%s %s %s (%s)\n", acType2str(d.accountType), d.name, d.searchWords, d.parent.name)
 
 		if enableType {
-			fmt.Print("y(es), t(ype), n(ame), s(earch words), p(arent), q(uit): ")
+			print("y(es), t(ype), n(ame), s(earch words), p(arent), q(uit): ")
 		} else {
-			fmt.Print("y(es), n(ame), s(earch words), p(arent), q(uit): ")
+			print("y(es), n(ame), s(earch words), p(arent), q(uit): ")
 		}
-		stdin.Scan()
-		a := strings.ToLower(stdin.Text())
+		a := strings.ToLower(input())
 
 		switch a {
 		case "q", "quit":
@@ -737,7 +720,7 @@ func selectAccount(accounts []account, header string) (*account, error) {
 
 	d := accounts[i]
 
-	fmt.Printf("%s: %s\n", header, d.name)
+	printf("%s: %s\n", header, d.name)
 
 	return &d, nil
 }

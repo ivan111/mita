@@ -62,7 +62,7 @@ func cmdListHistory(context *cli.Context) error {
 	}
 
 	src := getHistoryReader(history)
-	fmt.Print(src)
+	print(src)
 
 	return nil
 }
@@ -230,7 +230,7 @@ func selectUndoableHistory(db *sql.DB) (*history, error) {
 
 	d := items[i]
 
-	fmt.Printf("UNDO取引: %v\n", &d)
+	println("UNDO取引:", &d)
 
 	return &d, nil
 }
