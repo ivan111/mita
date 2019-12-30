@@ -38,7 +38,7 @@ func (d *account) String() string {
 	return d.name
 }
 
-func cmdListAccount(context *cli.Context) error {
+func cmdListAccounts(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {
 		return err
@@ -271,35 +271,10 @@ func cmdReorderAccount(context *cli.Context) error {
 }
 
 func cmdImportAccounts(context *cli.Context) error {
-	var f io.Reader
-	filename := context.Args().First()
-	if filename == "" {
-		f = os.Stdin
-	} else {
-		_, err := os.Stat(filename)
-		if err != nil {
-			return errors.New("ファイルが見つからない:" + filename)
-		}
-
-		file, err := os.Open(filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		f = file
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return addAccountsFromReader(db, f)
+	return importItems(context.Args().First(), readAccounts)
 }
 
-func addAccountsFromReader(db *sql.DB, f io.Reader) error {
+func readAccounts(db *sql.DB, f io.Reader) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -393,6 +368,32 @@ func arr2account(name2id map[string]int, arr []string) (*account, error) {
 	}
 
 	return &d, nil
+}
+
+func cmdExportAccounts(context *cli.Context) error {
+	return exportItems(context.Args().First(), writeAccounts)
+}
+
+func writeAccounts(db *sql.DB, f io.Writer) error {
+	accounts, err := dbGetAccounts(db)
+	if err != nil {
+		return err
+	}
+
+	for _, d := range accounts {
+		parent := d.parent.name
+		if parent == d.name {
+			parent = ""
+		}
+
+		_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%s\n",
+			acType2str(d.accountType), d.name, d.searchWords, parent)))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func selectOrderTarget(parents []account) (int, error) {

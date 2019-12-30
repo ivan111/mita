@@ -130,7 +130,7 @@ CREATE TABLE transactions_summary (
  */
 CREATE TABLE templates (
     template_id SERIAL,
-    name varchar(32) NOT NULL UNIQUE,
+    name varchar(8) NOT NULL UNIQUE,
 
     PRIMARY KEY (template_id)
 );

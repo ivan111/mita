@@ -78,7 +78,7 @@ func main() {
 					Flags: []cli.Flag{
 						cli.BoolFlag{Name: "all, a"},
 					},
-					Action: cmdListTransaction,
+					Action: cmdListTransactions,
 				},
 				{
 					Name:    "search",
@@ -109,6 +109,11 @@ func main() {
 					Usage:  "取引のインポート",
 					Action: cmdImportTransactions,
 				},
+				{
+					Name:   "export",
+					Usage:  "取引のエクスポート",
+					Action: cmdExportTransactions,
+				},
 			},
 		},
 		{
@@ -120,7 +125,7 @@ func main() {
 					Name:    "list",
 					Aliases: []string{"ls"},
 					Usage:   "勘定科目を一覧",
-					Action:  cmdListAccount,
+					Action:  cmdListAccounts,
 				},
 				{
 					Name:    "add",
@@ -151,6 +156,11 @@ func main() {
 					Usage:  "勘定科目のインポート",
 					Action: cmdImportAccounts,
 				},
+				{
+					Name:   "export",
+					Usage:  "勘定科目のエクスポート",
+					Action: cmdExportAccounts,
+				},
 			},
 		},
 		{
@@ -158,6 +168,12 @@ func main() {
 			Aliases: []string{"te"},
 			Usage:   "テンプレートのオプション",
 			Subcommands: []cli.Command{
+				{
+					Name:    "list",
+					Aliases: []string{"ls"},
+					Usage:   "テンプレートを一覧",
+					Action:  cmdListTemplates,
+				},
 				{
 					Name:    "add",
 					Aliases: []string{"a"},
@@ -186,6 +202,11 @@ func main() {
 					Name:   "import",
 					Usage:  "テンプレートのインポート",
 					Action: cmdImportTemplate,
+				},
+				{
+					Name:   "export",
+					Usage:  "テンプレートのエクスポート",
+					Action: cmdExportTemplates,
 				},
 			},
 		},
@@ -548,4 +569,62 @@ func skipSpace(s string) string {
 	}
 
 	return ""
+}
+
+func importItems(filename string, fn func(*sql.DB, io.Reader) error) error {
+	var f io.Reader
+
+	if filename == "" {
+		f = os.Stdin
+	} else {
+		_, err := os.Stat(filename)
+		if err != nil {
+			return errors.New("ファイルが見つからない:" + filename)
+		}
+
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f = file
+	}
+
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return fn(db, f)
+}
+
+func exportItems(filename string, fn func(*sql.DB, io.Writer) error) error {
+	var f io.Writer
+
+	if filename == "" {
+		f = os.Stdout
+	} else {
+		_, err := os.Stat(filename)
+		if err == nil {
+			return errors.New("ファイルが既に存在する:" + filename)
+		}
+
+		file, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f = file
+	}
+
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return fn(db, f)
 }

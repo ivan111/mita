@@ -39,6 +39,66 @@ func (d *templateDetail) String() string {
 		int2str(d.amount), d.note)
 }
 
+func cmdListTemplates(context *cli.Context) error {
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	count, err := dbCountTemplateItems(db)
+
+	maxNo := count - 1
+	noWidth := len(strconv.Itoa(maxNo))
+
+	templates, err := dbGetTemplates(db)
+	if err != nil {
+		return err
+	}
+
+	i := 0
+
+	for _, tmpl := range templates {
+		name := tmpl.name
+
+		items, err := dbGetTemplateItems(db, tmpl.id)
+		if err != nil {
+			return err
+		}
+
+		nameWidth := getTextWidth(name)
+		nw := 16 - nameWidth
+		if nw < 0 {
+			nw = 0
+		}
+
+		for _, d := range items {
+			debitWidth := getTextWidth(d.debit.name)
+			dw := 16 - debitWidth
+			if dw < 0 {
+				dw = 0
+			}
+
+			creditWidth := getTextWidth(d.credit.name)
+			cw := 16 - creditWidth
+			if cw < 0 {
+				cw = 0
+			}
+
+			fmt.Printf("%*d %s%*s %s%*s %s%*s %9s %s\n",
+				noWidth, i,
+				name, nw, "",
+				d.debit.name, dw, "",
+				d.credit.name, cw, "",
+				int2str(d.amount), d.note)
+
+			i++
+		}
+	}
+
+	return nil
+}
+
 func cmdAddTemplate(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {
@@ -405,35 +465,10 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 }
 
 func cmdImportTemplate(context *cli.Context) error {
-	var f io.Reader
-	filename := context.Args().First()
-	if filename == "" {
-		f = os.Stdin
-	} else {
-		_, err := os.Stat(filename)
-		if err != nil {
-			return errors.New("ファイルが見つからない:" + filename)
-		}
-
-		file, err := os.Open(filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		f = file
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return addTemplatesFromReader(db, f)
+	return importItems(context.Args().First(), readTemplates)
 }
 
-func addTemplatesFromReader(db *sql.DB, f io.Reader) error {
+func readTemplates(db *sql.DB, f io.Reader) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -532,6 +567,36 @@ func arr2templateItem(name2id map[string]int, arr []string) (*templateDetail, er
 	}
 
 	return &d, nil
+}
+
+func cmdExportTemplates(context *cli.Context) error {
+	return exportItems(context.Args().First(), writeTemplates)
+}
+
+func writeTemplates(db *sql.DB, f io.Writer) error {
+	templates, err := dbGetTemplates(db)
+	if err != nil {
+		return err
+	}
+
+	for _, tmpl := range templates {
+		name := tmpl.name
+
+		items, err := dbGetTemplateItems(db, tmpl.id)
+		if err != nil {
+			return err
+		}
+
+		for _, d := range items {
+			_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\n",
+				name, d.debit.name, d.credit.name, d.amount, d.note)))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
@@ -777,6 +842,27 @@ func dbReorderTemplateItem(db dbtx, d *templateDetail) error {
 	_, err := db.Exec(sqlReorderTemplateItem, d.templateID, d.no, d.orderNo)
 
 	return err
+}
+
+const sqlCountTemplateItems = `
+SELECT COUNT(*)
+FROM templates_detail
+`
+
+func dbCountTemplateItems(db dbtx) (int, error) {
+	var countStr string
+
+	err := db.QueryRow(sqlCountTemplateItems).Scan(&countStr)
+	if err != nil {
+		return 0, err
+	}
+
+	count, err := strconv.Atoi(countStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func selectTemplate(db *sql.DB) (*template, error) {

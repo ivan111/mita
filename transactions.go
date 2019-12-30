@@ -41,7 +41,7 @@ func (d *transaction) String() string {
 		int2str(d.amount), d.note, rng)
 }
 
-func cmdListTransaction(context *cli.Context) error {
+func cmdListTransactions(context *cli.Context) error {
 	db, err := connectDB()
 	if err != nil {
 		return err
@@ -51,14 +51,9 @@ func cmdListTransaction(context *cli.Context) error {
 	var transactions []transaction
 
 	if context.Bool("all") {
-		transactions, err = getTransactions(db)
+		transactions, err = getTransactions(db, false)
 		if err != nil {
 			return err
-		}
-
-		// reverse
-		for i, j := 0, len(transactions)-1; i < j; i, j = i+1, j-1 {
-			transactions[i], transactions[j] = transactions[j], transactions[i]
 		}
 	} else {
 		monthStr := context.Args().First()
@@ -289,35 +284,10 @@ func confirmUndoTransaction(d *history) bool {
 }
 
 func cmdImportTransactions(context *cli.Context) error {
-	var f io.Reader
-	filename := context.Args().First()
-	if filename == "" {
-		f = os.Stdin
-	} else {
-		_, err := os.Stat(filename)
-		if err != nil {
-			return errors.New("ファイルが見つからない:" + filename)
-		}
-
-		file, err := os.Open(filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		f = file
-	}
-
-	db, err := connectDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return addTransactionsFromReader(db, f)
+	return importItems(context.Args().First(), readTransactions)
 }
 
-func addTransactionsFromReader(db *sql.DB, f io.Reader) error {
+func readTransactions(db *sql.DB, f io.Reader) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -375,48 +345,6 @@ func addTransactionsFromReader(db *sql.DB, f io.Reader) error {
 	return tx.Commit()
 }
 
-func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
-	for {
-		fmt.Println()
-		fmt.Println(tr)
-
-		fmt.Print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
-		stdin.Scan()
-		a := strings.ToLower(stdin.Text())
-
-		switch a {
-		case "q", "quit":
-			return false, nil
-		case "y", "yes":
-			return true, nil
-		case "d", "date":
-			tr.date = scanDate()
-		case "l", "left":
-			debit, err := selectAccount(accounts, "借方")
-			if err != nil {
-				return false, err
-			}
-			if debit != nil {
-				tr.debit = *debit
-			}
-		case "r", "right":
-			credit, err := selectAccount(accounts, "貸方")
-			if err != nil {
-				return false, err
-			}
-			if credit != nil {
-				tr.credit = *credit
-			}
-		case "a", "amount":
-			tr.amount = scanAmount()
-		case "n", "note":
-			tr.note = scanNote()
-		case "s":
-			tr.start, tr.end = scanRange()
-		}
-	}
-}
-
 func arr2transaction(name2id map[string]int, arr []string) (*transaction, error) {
 	var d transaction
 
@@ -461,6 +389,71 @@ func arr2transaction(name2id map[string]int, arr []string) (*transaction, error)
 	}
 
 	return &d, nil
+}
+
+func cmdExportTransactions(context *cli.Context) error {
+	return exportItems(context.Args().First(), writeTransactions)
+}
+
+func writeTransactions(db *sql.DB, f io.Writer) error {
+	transactions, err := getTransactions(db, false)
+	if err != nil {
+		return err
+	}
+
+	for _, d := range transactions {
+		date := d.date.Format("2006-01-02")
+
+		_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%d\t%d\n",
+			date, d.debit.name, d.credit.name, d.amount, d.note, d.start, d.end)))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
+	for {
+		fmt.Println()
+		fmt.Println(tr)
+
+		fmt.Print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
+		stdin.Scan()
+		a := strings.ToLower(stdin.Text())
+
+		switch a {
+		case "q", "quit":
+			return false, nil
+		case "y", "yes":
+			return true, nil
+		case "d", "date":
+			tr.date = scanDate()
+		case "l", "left":
+			debit, err := selectAccount(accounts, "借方")
+			if err != nil {
+				return false, err
+			}
+			if debit != nil {
+				tr.debit = *debit
+			}
+		case "r", "right":
+			credit, err := selectAccount(accounts, "貸方")
+			if err != nil {
+				return false, err
+			}
+			if credit != nil {
+				tr.credit = *credit
+			}
+		case "a", "amount":
+			tr.amount = scanAmount()
+		case "n", "note":
+			tr.note = scanNote()
+		case "s":
+			tr.start, tr.end = scanRange()
+		}
+	}
 }
 
 func rows2transactions(rows *sql.Rows) ([]transaction, error) {
@@ -517,11 +510,17 @@ func dbGetTransaction(db *sql.DB, id int) (*transaction, error) {
 const sqlGetTransactions = `
 SELECT ` + transactionRows + `
 FROM transactions_view
-ORDER BY date DESC, transaction_id DESC
 `
 
-func getTransactions(db *sql.DB) ([]transaction, error) {
-	rows, err := db.Query(sqlGetTransactions)
+func getTransactions(db *sql.DB, reverse bool) ([]transaction, error) {
+	var sql string
+	if reverse {
+		sql = sqlGetTransactions + "ORDER BY date DESC, transaction_id DESC"
+	} else {
+		sql = sqlGetTransactions + "ORDER BY date, transaction_id"
+	}
+
+	rows, err := db.Query(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -652,7 +651,7 @@ func getTransactionsReader(transactions []transaction, showSearchWords bool) io.
 }
 
 func selectTransaction(db *sql.DB) (*transaction, error) {
-	transactions, err := getTransactions(db)
+	transactions, err := getTransactions(db, true)
 	if err != nil {
 		return nil, err
 	}
