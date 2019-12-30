@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -400,6 +402,136 @@ func reorderTemplateDetails(db *sql.DB, tmpl *template) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func cmdImportTemplate(context *cli.Context) error {
+	var f io.Reader
+	filename := context.Args().First()
+	if filename == "" {
+		f = os.Stdin
+	} else {
+		_, err := os.Stat(filename)
+		if err != nil {
+			return errors.New("ファイルが見つからない:" + filename)
+		}
+
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f = file
+	}
+
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return addTemplatesFromReader(db, f)
+}
+
+func addTemplatesFromReader(db *sql.DB, f io.Reader) error {
+	accounts, err := dbGetAccounts(db)
+	if err != nil {
+		return err
+	}
+
+	name2id := make(map[string]int)
+
+	for _, d := range accounts {
+		name2id[d.name] = d.id
+	}
+
+	scanner := bufio.NewScanner(f)
+
+	name2items := make(map[string][]*templateDetail)
+
+	lineNo := 0
+
+	for scanner.Scan() {
+		lineNo++
+
+		line := skipSpace(scanner.Text())
+
+		if line == "" || line[0] == '#' {
+			continue
+		}
+
+		arr := strings.Split(line, "\t")
+
+		if len(arr) < 3 || len(arr) > 5 {
+			return fmt.Errorf("%d:1行の項目数が3から5でない", lineNo)
+		}
+
+		d, err := arr2templateItem(name2id, arr)
+		if err != nil {
+			return fmt.Errorf("%d:%s", lineNo, err)
+		}
+
+		name2items[arr[0]] = append(name2items[arr[0]], d)
+	}
+
+	if err = scanner.Err(); err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	for parentName, items := range name2items {
+		id, err := dbAddTemplate(tx, parentName)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		for i, item := range items {
+			item.templateID = id
+			item.no = i + 1
+			item.orderNo = i + 1
+
+			err := dbAddTemplateItem(tx, item)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func arr2templateItem(name2id map[string]int, arr []string) (*templateDetail, error) {
+	var d templateDetail
+
+	d.debit.id = name2id[arr[1]]
+	if d.debit.id == 0 {
+		return nil, fmt.Errorf("借方:存在しない勘定科目'%s'", arr[1])
+	}
+
+	d.credit.id = name2id[arr[2]]
+	if d.credit.id == 0 {
+		return nil, fmt.Errorf("貸方:存在しない勘定科目'%s'", arr[2])
+	}
+
+	if len(arr) >= 4 && arr[3] != "" {
+		amount, err := strconv.Atoi(arr[3])
+		if err != nil {
+			return nil, fmt.Errorf("金額:%s", err)
+		}
+		d.amount = amount
+	}
+
+	if len(arr) >= 5 {
+		d.note = arr[4]
+	}
+
+	return &d, nil
 }
 
 func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {

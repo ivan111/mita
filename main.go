@@ -182,6 +182,11 @@ func main() {
 					Usage:   "テンプレートを使用",
 					Action:  cmdUseTemplate,
 				},
+				{
+					Name:   "import",
+					Usage:  "テンプレートのインポート",
+					Action: cmdImportTemplate,
+				},
 			},
 		},
 		{
