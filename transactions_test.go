@@ -39,14 +39,14 @@ func TestStr2date(t *testing.T) {
 		t.Fatalf(`str2date("12-31"), got = %s, want = %s`, d, omisoka)
 	}
 
-	happy_new_year := time.Date(2018, 1, 1, 0, 0, 0, 0, time.Local)
+	happyNewYear := time.Date(2018, 1, 1, 0, 0, 0, 0, time.Local)
 
-	if d, err := str2date("2018/1/1"); err != nil || !isSameDate(d, happy_new_year) {
-		t.Fatalf(`str2date("2018/1/1"), got = %s, want = %s`, d, happy_new_year)
+	if d, err := str2date("2018/1/1"); err != nil || !isSameDate(d, happyNewYear) {
+		t.Fatalf(`str2date("2018/1/1"), got = %s, want = %s`, d, happyNewYear)
 	}
 
-	if d, err := str2date("2018-01-01"); err != nil || !isSameDate(d, happy_new_year) {
-		t.Fatalf(`str2date("2018-01-01"), got = %s, want = %s`, d, happy_new_year)
+	if d, err := str2date("2018-01-01"); err != nil || !isSameDate(d, happyNewYear) {
+		t.Fatalf(`str2date("2018-01-01"), got = %s, want = %s`, d, happyNewYear)
 	}
 
 	if _, err := str2date("1a"); err == nil {
@@ -73,10 +73,10 @@ func TestStr2month(t *testing.T) {
 		t.Fatalf(`str2month(""), got = %d, want = %d`, m, 0)
 	}
 
-	prev_month := toMonth(now.AddDate(0, -1, 0))
+	prevMonth := toMonth(now.AddDate(0, -1, 0))
 
-	if m, err := str2month("-1"); err != nil || m != prev_month {
-		t.Fatalf(`str2month("-1"), got = %d, want = %d`, m, prev_month)
+	if m, err := str2month("-1"); err != nil || m != prevMonth {
+		t.Fatalf(`str2month("-1"), got = %d, want = %d`, m, prevMonth)
 	}
 
 	month1 := toMonth(time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.Local))

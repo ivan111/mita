@@ -643,12 +643,13 @@ func str2date(s string) (time.Time, error) {
 	}
 
 	if s[0] == '-' {
-		if v, err := strconv.Atoi(s[1:]); err != nil {
+		v, err := strconv.Atoi(s[1:])
+		if err != nil {
 			return time.Time{}, err
-		} else {
-			date := today.AddDate(0, 0, -v)
-			return date, nil
 		}
+
+		date := today.AddDate(0, 0, -v)
+		return date, nil
 	}
 
 	if v, err := strconv.Atoi(s); err == nil {
@@ -674,11 +675,12 @@ func str2date(s string) (time.Time, error) {
 	var iArr = make([]int, 3)
 
 	for i, ss := range arr {
-		if v, err := strconv.Atoi(ss); err != nil {
+		v, err := strconv.Atoi(ss)
+		if err != nil {
 			return time.Time{}, err
-		} else {
-			iArr[i] = v
 		}
+
+		iArr[i] = v
 	}
 
 	var year, month, day int
@@ -729,12 +731,13 @@ func str2month(s string) (int, error) {
 	}
 
 	if s[0] == '-' {
-		if v, err := strconv.Atoi(s[1:]); err != nil {
+		v, err := strconv.Atoi(s[1:])
+		if err != nil {
 			return 0, err
-		} else {
-			date := thisMonth.AddDate(0, -v, 0)
-			return time2month(date), nil
 		}
+
+		date := thisMonth.AddDate(0, -v, 0)
+		return time2month(date), nil
 	}
 
 	if v, err := strconv.Atoi(s); err == nil {
@@ -767,11 +770,12 @@ func str2month(s string) (int, error) {
 	var iArr = make([]int, 3)
 
 	for i, ss := range arr {
-		if v, err := strconv.Atoi(ss); err != nil {
+		v, err := strconv.Atoi(ss)
+		if err != nil {
 			return 0, err
-		} else {
-			iArr[i] = v
 		}
+
+		iArr[i] = v
 	}
 
 	var year, month int

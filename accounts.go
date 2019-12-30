@@ -308,7 +308,7 @@ func addAccountsFromFile(db *sql.DB, filename string) error {
 
 		if len(arr) != 4 {
 			tx.Rollback()
-			return errors.New(fmt.Sprintf("1行に項目が4つない。行:%d", lineNo))
+			return fmt.Errorf("1行に項目が4つない。行:%d", lineNo)
 		}
 
 		d, err := arr2account(arr)
@@ -321,7 +321,7 @@ func addAccountsFromFile(db *sql.DB, filename string) error {
 			parentID := name2id[arr[3]]
 			if parentID == 0 {
 				tx.Rollback()
-				return errors.New(fmt.Sprintf("存在しない親'%s'。行:%d", arr[3], lineNo))
+				return fmt.Errorf("存在しない親'%s'。行:%d", arr[3], lineNo)
 			}
 
 			d.parent.id = parentID
