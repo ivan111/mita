@@ -125,23 +125,45 @@ func cmdAddTransaction(context *cli.Context) error {
 		return err
 	}
 
-	tr, err := scanTransaction(accounts)
-	if err != nil {
-		return err
-	}
-	if tr == nil {
-		return nil
-	}
+	var d *transaction
 
-	ok, err := confirmTransaction(accounts, tr)
-	if err != nil {
-		return err
-	}
+	args := context.Args()
 
-	if ok {
-		if _, err = dbAddTransaction(db, tr); err != nil {
+	switch len(args) {
+	case 0:
+		d, err = scanTransaction(accounts)
+		if err != nil {
 			return err
 		}
+		if d == nil {
+			return nil
+		}
+
+		ok, err := confirmTransaction(accounts, d)
+		if err != nil {
+			return err
+		}
+
+		if ok == false {
+			return nil
+		}
+	case 4, 5, 7:
+		name2id := make(map[string]int)
+
+		for _, d := range accounts {
+			name2id[d.name] = d.id
+		}
+
+		d, err = arr2transaction(name2id, args)
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("Usage: mita-cli add date debit credit amount [description] [startMonth endMonth]")
+	}
+
+	if _, err = dbAddTransaction(db, d); err != nil {
+		return err
 	}
 
 	return nil
@@ -305,6 +327,52 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 			tr.start, tr.end = scanRange()
 		}
 	}
+}
+
+func arr2transaction(name2id map[string]int, arr []string) (*transaction, error) {
+	var d transaction
+
+	date, err := str2date(arr[0])
+	if err != nil {
+		return nil, fmt.Errorf("日付:%s", err)
+	}
+	d.date = date
+
+	d.debit.id = name2id[arr[1]]
+	if d.debit.id == 0 {
+		return nil, fmt.Errorf("借方:存在しない勘定科目'%s'", arr[1])
+	}
+
+	d.credit.id = name2id[arr[2]]
+	if d.credit.id == 0 {
+		return nil, fmt.Errorf("貸方:存在しない勘定科目'%s'", arr[2])
+	}
+
+	amount, err := strconv.Atoi(arr[3])
+	if err != nil {
+		return nil, fmt.Errorf("金額:%s", err)
+	}
+	d.amount = amount
+
+	if len(arr) >= 5 {
+		d.note = arr[4]
+	}
+
+	if len(arr) >= 7 {
+		start, err := str2month(arr[5])
+		if err != nil {
+			return nil, fmt.Errorf("開始月:%s", err)
+		}
+		d.start = start
+
+		end, err := str2month(arr[6])
+		if err != nil {
+			return nil, fmt.Errorf("終了月:%s", err)
+		}
+		d.end = end
+	}
+
+	return &d, nil
 }
 
 func rows2transactions(rows *sql.Rows) ([]transaction, error) {
