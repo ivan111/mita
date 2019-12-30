@@ -396,6 +396,8 @@ func cmdExportTransactions(context *cli.Context) error {
 }
 
 func writeTransactions(db *sql.DB, f io.Writer) error {
+	b := bufio.NewWriter(f)
+
 	transactions, err := getTransactions(db, false)
 	if err != nil {
 		return err
@@ -404,12 +406,14 @@ func writeTransactions(db *sql.DB, f io.Writer) error {
 	for _, d := range transactions {
 		date := d.date.Format("2006-01-02")
 
-		_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%d\t%d\n",
-			date, d.debit.name, d.credit.name, d.amount, d.note, d.start, d.end)))
+		_, err := b.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%d\t%d\n",
+			date, d.debit.name, d.credit.name, d.amount, d.note, d.start, d.end))
 		if err != nil {
 			return err
 		}
 	}
+
+	b.Flush()
 
 	return nil
 }

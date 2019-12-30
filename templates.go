@@ -574,6 +574,8 @@ func cmdExportTemplates(context *cli.Context) error {
 }
 
 func writeTemplates(db *sql.DB, f io.Writer) error {
+	b := bufio.NewWriter(f)
+
 	templates, err := dbGetTemplates(db)
 	if err != nil {
 		return err
@@ -588,13 +590,15 @@ func writeTemplates(db *sql.DB, f io.Writer) error {
 		}
 
 		for _, d := range items {
-			_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\n",
-				name, d.debit.name, d.credit.name, d.amount, d.note)))
+			_, err := b.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%s\n",
+				name, d.debit.name, d.credit.name, d.amount, d.note))
 			if err != nil {
 				return err
 			}
 		}
 	}
+
+	b.Flush()
 
 	return nil
 }

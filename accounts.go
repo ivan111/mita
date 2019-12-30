@@ -375,6 +375,8 @@ func cmdExportAccounts(context *cli.Context) error {
 }
 
 func writeAccounts(db *sql.DB, f io.Writer) error {
+	b := bufio.NewWriter(f)
+
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -386,12 +388,14 @@ func writeAccounts(db *sql.DB, f io.Writer) error {
 			parent = ""
 		}
 
-		_, err := f.Write([]byte(fmt.Sprintf("%s\t%s\t%s\t%s\n",
-			acType2str(d.accountType), d.name, d.searchWords, parent)))
+		_, err := b.WriteString(fmt.Sprintf("%s\t%s\t%s\t%s\n",
+			acType2str(d.accountType), d.name, d.searchWords, parent))
 		if err != nil {
 			return err
 		}
 	}
+
+	b.Flush()
 
 	return nil
 }
