@@ -1,17 +1,22 @@
 package main
 
+//go:generate statik
+
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "github.com/ivan111/mita-cli/statik"
 	_ "github.com/lib/pq"
+	"github.com/rakyll/statik/fs"
 	"github.com/urfave/cli"
 	"net/http"
 	"os"
 )
 
 func cmdServer(context *cli.Context) error {
-	fs := http.FileServer(http.Dir("static"))
+	statikFS, _ := fs.New()
+	fs := http.FileServer(statikFS)
 	http.Handle("/", fs)
 	http.HandleFunc("/api/bp", apiBPHandler)
 	http.HandleFunc("/api/pl", apiPLHandler)
