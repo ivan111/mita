@@ -69,20 +69,42 @@ func cmdAddAccount(context *cli.Context) error {
 		return err
 	}
 
-	d, err := scanAccount(accounts)
-	if err != nil {
-		return err
-	}
+	var d *account
 
-	ok, err := confirmAccount(accounts, d, true)
-	if err != nil {
-		return err
-	}
+	args := context.Args()
 
-	if ok {
-		if _, err = dbAddAccount(db, d); err != nil {
+	switch len(args) {
+	case 0:
+		d, err = scanAccount(accounts)
+		if err != nil {
 			return err
 		}
+
+		ok, err := confirmAccount(accounts, d, true)
+		if err != nil {
+			return err
+		}
+
+		if ok == false {
+			return nil
+		}
+	case 2, 3, 4:
+		name2id := make(map[string]int)
+
+		for _, d := range accounts {
+			name2id[d.name] = d.id
+		}
+
+		d, err = arr2account(name2id, args)
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("Usage: mita-cli account add accountType name [searchWords] [parent]")
+	}
+
+	if _, err = dbAddAccount(db, d); err != nil {
+		return err
 	}
 
 	return nil
@@ -249,14 +271,23 @@ func cmdReorderAccount(context *cli.Context) error {
 }
 
 func cmdImportAccounts(context *cli.Context) error {
+	var f io.Reader
 	filename := context.Args().First()
 	if filename == "" {
-		return errors.New("引数にファイル名がない")
-	}
+		f = os.Stdin
+	} else {
+		_, err := os.Stat(filename)
+		if err != nil {
+			return errors.New("ファイルが見つからない:" + filename)
+		}
 
-	_, err := os.Stat(filename)
-	if err != nil {
-		return errors.New("ファイルが見つからない:" + filename)
+		file, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f = file
 	}
 
 	db, err := connectDB()
@@ -265,16 +296,10 @@ func cmdImportAccounts(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	return addAccountsFromFile(db, filename)
+	return addAccountsFromReader(db, f)
 }
 
-func addAccountsFromFile(db *sql.DB, filename string) error {
-	f, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
+func addAccountsFromReader(db *sql.DB, f io.Reader) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -306,25 +331,15 @@ func addAccountsFromFile(db *sql.DB, filename string) error {
 
 		arr := strings.Split(line, "\t")
 
-		if len(arr) != 4 {
+		if len(arr) < 2 || len(arr) > 4 {
 			tx.Rollback()
-			return fmt.Errorf("1行に項目が4つない。行:%d", lineNo)
+			return fmt.Errorf("%d:1行の項目数が2から4でない", lineNo)
 		}
 
-		d, err := arr2account(arr)
+		d, err := arr2account(name2id, arr)
 		if err != nil {
 			tx.Rollback()
-			return err
-		}
-
-		if arr[3] != "" {
-			parentID := name2id[arr[3]]
-			if parentID == 0 {
-				tx.Rollback()
-				return fmt.Errorf("存在しない親'%s'。行:%d", arr[3], lineNo)
-			}
-
-			d.parent.id = parentID
+			return fmt.Errorf("%d:%s", lineNo, err)
 		}
 
 		id, err := dbAddAccount(tx, d)
@@ -344,7 +359,7 @@ func addAccountsFromFile(db *sql.DB, filename string) error {
 	return tx.Commit()
 }
 
-func arr2account(arr []string) (*account, error) {
+func arr2account(name2id map[string]int, arr []string) (*account, error) {
 	var d account
 
 	switch arr[0] {
@@ -363,7 +378,19 @@ func arr2account(arr []string) (*account, error) {
 	}
 
 	d.name = arr[1]
-	d.searchWords = arr[2]
+
+	if len(arr) >= 3 {
+		d.searchWords = arr[2]
+	}
+
+	if len(arr) >= 4 && arr[3] != "" {
+		parentID := name2id[arr[3]]
+		if parentID == 0 {
+			return nil, fmt.Errorf("存在しない親'%s'", arr[3])
+		}
+
+		d.parent.id = parentID
+	}
 
 	return &d, nil
 }
