@@ -21,7 +21,7 @@ type history struct {
 }
 
 func (d *history) String() string {
-	operateTime := d.operateTime.Format("2006-01-02 15:04:05")
+	operateTime := d.operateTime.Local().Format("2006-01-02 15:04:05")
 
 	return fmt.Sprintf("%s %s %v", operateTime, d.operation, &d.tr)
 }
@@ -182,7 +182,7 @@ func dbGetUndoableHistory(db *sql.DB) ([]history, error) {
 }
 
 func history2alignedString(d *history) string {
-	operateTime := d.operateTime.Format("2006-01-02 15:04:05")
+	operateTime := d.operateTime.Local().Format("2006-01-02 15:04:05")
 
 	return fmt.Sprintf("%s %s %s", operateTime, d.operation,
 		tr2alignedString(&d.tr))
