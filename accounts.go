@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	acTypeAsset     = iota + 1 //資産
+	acTypeAsset     = iota + 1 // 資産
 	acTypeLiability            // 負債
 	acTypeIncome               // 収入
 	acTypeExpense              // 費用
-	acTypeOther                // その他
+	acTypeEquity               // 資本
 )
 
 type account struct {
@@ -346,8 +346,8 @@ func arr2account(name2id map[string]int, arr []string) (*account, error) {
 		d.accountType = acTypeIncome
 	case "費用", "4":
 		d.accountType = acTypeExpense
-	case "その他", "5":
-		d.accountType = acTypeOther
+	case "資本", "5":
+		d.accountType = acTypeEquity
 	default:
 		return nil, errors.New("不明なタイプ:" + arr[0])
 	}
@@ -685,12 +685,7 @@ func getAccountsReader(accounts []account) io.Reader {
 		src.WriteString(fmt.Sprintf("%*d", noWidth, i))
 
 		typeStr := acType2str(ac.accountType)
-		typeWidth := getTextWidth(typeStr)
-		tw := 6 - typeWidth
-		if tw < 0 {
-			tw = 0
-		}
-		src.WriteString(fmt.Sprintf(" %s%*s", typeStr, tw, ""))
+		src.WriteString(fmt.Sprintf(" %s", typeStr))
 
 		nameWidth := getTextWidth(ac.name)
 		nw := 16 - nameWidth
@@ -762,7 +757,7 @@ func scanAccount(accounts []account) (*account, error) {
 }
 
 func scanAccountType() int {
-	return scanInt("タイプ (1: 資産, 2: 負債, 3: 収入, 4: 費用, 5: その他)", 1, 5)
+	return scanInt("タイプ (1: 資産, 2: 負債, 3: 収入, 4: 費用, 5: 資本)", 1, 5)
 }
 
 func scanAccountName() string {
@@ -786,7 +781,7 @@ func acType2str(t int) string {
 	case 4:
 		s = "費用"
 	case 5:
-		s = "その他"
+		s = "資本"
 	default:
 		s = "不明"
 	}
