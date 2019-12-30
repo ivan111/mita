@@ -67,63 +67,44 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
-			Name:    "ls",
-			Aliases: []string{"list"},
-			Usage:   "取引を一覧",
-			Flags: []cli.Flag{
-				cli.BoolFlag{Name: "all, a"},
-			},
-			Action: cmdListTransaction,
-		},
-		{
-			Name:    "search",
-			Aliases: []string{"s"},
-			Usage:   "取引を検索",
-			Action:  cmdSearchTransaction,
-		},
-		{
-			Name:    "add",
-			Aliases: []string{"a"},
-			Usage:   "取引を追加",
-			Action:  cmdAddTransaction,
-		},
-		{
-			Name:    "edit",
-			Aliases: []string{"e"},
-			Usage:   "取引を編集",
-			Action:  cmdEditTransaction,
-		},
-		{
-			Name:    "remove",
-			Aliases: []string{"r"},
-			Usage:   "取引を削除",
-			Action:  cmdRemoveTransaction,
-		},
-		{
-			Name:   "bs",
-			Usage:  "資産・負債の一覧",
-			Action: cmdBS,
-		},
-		{
-			Name:   "pl",
-			Usage:  "月の収入・費用の一覧",
-			Action: cmdPL,
-		},
-		{
-			Name:  "server",
-			Usage: "グラフサイトを表示するHTTPサーバを起動",
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "port, p",
-					Value: configData.Server.Port,
+			Name:    "transaction",
+			Aliases: []string{"tr"},
+			Usage:   "取引のオプション",
+			Subcommands: []cli.Command{
+				{
+					Name:    "list",
+					Aliases: []string{"ls"},
+					Usage:   "取引を一覧",
+					Flags: []cli.Flag{
+						cli.BoolFlag{Name: "all, a"},
+					},
+					Action: cmdListTransaction,
+				},
+				{
+					Name:    "search",
+					Aliases: []string{"s"},
+					Usage:   "取引を検索",
+					Action:  cmdSearchTransaction,
+				},
+				{
+					Name:    "add",
+					Aliases: []string{"a"},
+					Usage:   "取引を追加",
+					Action:  cmdAddTransaction,
+				},
+				{
+					Name:    "edit",
+					Aliases: []string{"e"},
+					Usage:   "取引を編集",
+					Action:  cmdEditTransaction,
+				},
+				{
+					Name:    "remove",
+					Aliases: []string{"r"},
+					Usage:   "取引を削除",
+					Action:  cmdRemoveTransaction,
 				},
 			},
-			Action: cmdServer,
-		},
-		{
-			Name:   "undo",
-			Usage:  "取引への操作を元に戻す",
-			Action: cmdUndoTransaction,
 		},
 		{
 			Name:    "account",
@@ -131,8 +112,8 @@ func main() {
 			Usage:   "勘定科目のオプション",
 			Subcommands: []cli.Command{
 				{
-					Name:    "ls",
-					Aliases: []string{"list"},
+					Name:    "list",
+					Aliases: []string{"ls"},
 					Usage:   "勘定科目を一覧",
 					Action:  cmdListAccount,
 				},
@@ -169,7 +150,7 @@ func main() {
 		},
 		{
 			Name:    "template",
-			Aliases: []string{"t"},
+			Aliases: []string{"te"},
 			Usage:   "テンプレートのオプション",
 			Subcommands: []cli.Command{
 				{
@@ -203,8 +184,8 @@ func main() {
 			Usage: "履歴のオプション",
 			Subcommands: []cli.Command{
 				{
-					Name:    "ls",
-					Aliases: []string{"list"},
+					Name:    "list",
+					Aliases: []string{"ls"},
 					Usage:   "履歴を一覧",
 					Flags: []cli.Flag{
 						cli.BoolFlag{Name: "all, a"},
@@ -212,6 +193,32 @@ func main() {
 					Action: cmdListHistory,
 				},
 			},
+		},
+		{
+			Name:   "bs",
+			Usage:  "資産・負債の一覧",
+			Action: cmdBS,
+		},
+		{
+			Name:   "pl",
+			Usage:  "月の収入・費用の一覧",
+			Action: cmdPL,
+		},
+		{
+			Name:  "server",
+			Usage: "グラフサイトを表示するHTTPサーバを起動",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "port, p",
+					Value: configData.Server.Port,
+				},
+			},
+			Action: cmdServer,
+		},
+		{
+			Name:   "undo",
+			Usage:  "取引への操作を元に戻す",
+			Action: cmdUndoTransaction,
 		},
 	}
 

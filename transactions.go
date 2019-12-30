@@ -159,7 +159,7 @@ func cmdAddTransaction(context *cli.Context) error {
 			return err
 		}
 	default:
-		return errors.New("Usage: mita-cli add date debit credit amount [description] [startMonth endMonth]")
+		return errors.New("Usage: mita-cli transaction add date debit credit amount [description] [startMonth endMonth]")
 	}
 
 	if _, err = dbAddTransaction(db, d); err != nil {
