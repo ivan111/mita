@@ -879,7 +879,6 @@ yyyymm: yyyy年mm月
 */
 func str2month(s string) (int, error) {
 	now := time.Now()
-	thisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
 
 	if len(s) == 0 {
 		return 0, nil
@@ -891,8 +890,7 @@ func str2month(s string) (int, error) {
 			return 0, err
 		}
 
-		date := thisMonth.AddDate(0, -v, 0)
-		return time2month(date), nil
+		return subtractMonth(time2month(now), v), nil
 	}
 
 	if v, err := strconv.Atoi(s); err == nil {
@@ -945,6 +943,21 @@ func str2month(s string) (int, error) {
 	}
 
 	return time2month(date), nil
+}
+
+func subtractMonth(ym int, n int) int {
+	year := ym / 100
+	month := ym % 100
+
+	year -= n / 12
+	month -= n % 12
+
+	if month < 1 {
+		month += 12
+		year--
+	}
+
+	return year*100 + month
 }
 
 /*

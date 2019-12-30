@@ -73,7 +73,13 @@ func TestStr2month(t *testing.T) {
 		t.Fatalf(`str2month(""), got = %d, want = %d`, m, 0)
 	}
 
-	prevMonth := toMonth(now.AddDate(0, -1, 0))
+	year := now.Year()
+	month := now.Month() - 1
+	if month == 0 {
+		month = 12
+		year--
+	}
+	prevMonth := year*100 + int(month)
 
 	if m, err := str2month("-1"); err != nil || m != prevMonth {
 		t.Fatalf(`str2month("-1"), got = %d, want = %d`, m, prevMonth)
@@ -113,6 +119,28 @@ func TestStr2month(t *testing.T) {
 
 	if _, err := str2month("201813"); err == nil {
 		t.Fatal(`str2month("201813") should be error`)
+	}
+}
+
+type subtractMonthTest struct {
+	argYM int
+	argN  int
+	res   int
+}
+
+var subtractMonthTests = []subtractMonthTest{
+	{202001, 0, 202001},
+	{202002, 1, 202001},
+	{202001, 1, 201912},
+	{202001, 25, 201712},
+}
+
+func TestSubtractMonth(t *testing.T) {
+	for i, test := range subtractMonthTests {
+		res := subtractMonth(test.argYM, test.argN)
+		if res != test.res {
+			t.Errorf("#%d: got: %#v want: %#v", i, res, test.res)
+		}
 	}
 }
 
