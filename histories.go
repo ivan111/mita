@@ -206,6 +206,10 @@ func getHistoryReader(history []history) io.Reader {
 func selectUndoableHistory(db *sql.DB) (*history, error) {
 	items, err := dbGetUndoableHistory(db)
 
+	if len(items) == 0 {
+		return nil, nil
+	}
+
 	src := getHistoryReader(items)
 	dst := new(bytes.Buffer)
 	args := []string{

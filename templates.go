@@ -479,10 +479,6 @@ func readTemplates(db *sql.DB, f io.Reader) error {
 
 		arr := strings.Split(line, "\t")
 
-		if len(arr) < 3 || len(arr) > 5 {
-			return fmt.Errorf("%d:1行の項目数が3から5でない", lineNo)
-		}
-
 		d, err := arr2templateItem(name2id, arr)
 		if err != nil {
 			return fmt.Errorf("%d:%s", lineNo, err)
@@ -524,6 +520,11 @@ func readTemplates(db *sql.DB, f io.Reader) error {
 }
 
 func arr2templateItem(name2id map[string]int, arr []string) (*templateDetail, error) {
+	arrLen := len(arr)
+	if arrLen < 3 || arrLen > 5 {
+		return nil, fmt.Errorf("項目数が3から5でない")
+	}
+
 	var d templateDetail
 
 	d.debit.id = name2id[arr[1]]
@@ -855,6 +856,10 @@ func selectTemplate(db *sql.DB) (*template, error) {
 		return nil, err
 	}
 
+	if len(templates) == 0 {
+		return nil, nil
+	}
+
 	src := new(bytes.Buffer)
 
 	for i, d := range templates {
@@ -895,6 +900,10 @@ func selectTemplate(db *sql.DB) (*template, error) {
 }
 
 func selectTemplateDetail(items []templateDetail) (*templateDetail, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
+
 	src := new(bytes.Buffer)
 
 	for i, d := range items {

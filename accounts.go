@@ -45,6 +45,10 @@ func cmdListAccounts(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runListAccounts(db)
+}
+
+func runListAccounts(db *sql.DB) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -64,14 +68,16 @@ func cmdAddAccount(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runAddAccount(db, context.Args())
+}
+
+func runAddAccount(db *sql.DB, args []string) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
 	}
 
 	var d *account
-
-	args := context.Args()
 
 	switch len(args) {
 	case 0:
@@ -117,6 +123,10 @@ func cmdEditAccount(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runEditAccount(db)
+}
+
+func runEditAccount(db *sql.DB) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -147,6 +157,11 @@ func cmdRemoveAccount(context *cli.Context) error {
 		return err
 	}
 	defer db.Close()
+
+	return runRemoveAccount(db)
+}
+
+func runRemoveAccount(db *sql.DB) error {
 
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
@@ -291,11 +306,6 @@ func readAccounts(db *sql.DB, f io.Reader) error {
 
 		arr := strings.Split(line, "\t")
 
-		if len(arr) < 2 || len(arr) > 4 {
-			tx.Rollback()
-			return fmt.Errorf("%d:1行の項目数が2から4でない", lineNo)
-		}
-
 		d, err := arr2account(name2id, arr)
 		if err != nil {
 			tx.Rollback()
@@ -320,6 +330,11 @@ func readAccounts(db *sql.DB, f io.Reader) error {
 }
 
 func arr2account(name2id map[string]int, arr []string) (*account, error) {
+	arrLen := len(arr)
+	if arrLen < 2 || arrLen > 4 {
+		return nil, fmt.Errorf("項目数が2から4でない")
+	}
+
 	var d account
 
 	switch arr[0] {
@@ -696,6 +711,10 @@ func getAccountsReader(accounts []account) io.Reader {
 }
 
 func selectAccount(accounts []account, header string) (*account, error) {
+	if len(accounts) == 0 {
+		return nil, nil
+	}
+
 	src := getAccountsReader(accounts)
 	dst := new(bytes.Buffer)
 	args := []string{

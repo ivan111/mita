@@ -1,8 +1,109 @@
 package main
 
 import (
+	"database/sql"
+	_ "github.com/lib/pq"
+	"os"
+	"path/filepath"
 	"testing"
 )
+
+func setup() (*sql.DB, error) {
+	testMode = true
+
+	configData.DB.Name = "mita_test"
+
+	db, err := connectDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = dbClean(db)
+	if err != nil {
+		return db, err
+	}
+
+	return db, nil
+}
+
+func setupAccounts() (*sql.DB, error) {
+	db, err := setup()
+	if err != nil {
+		return db, err
+	}
+
+	f, err := os.Open(filepath.Join("testdata", "accounts.tsv"))
+	if err != nil {
+		return db, err
+	}
+	defer f.Close()
+
+	if err := readAccounts(db, f); err != nil {
+		return db, err
+	}
+
+	return db, nil
+}
+
+func setupAcAndTr() (*sql.DB, error) {
+	db, err := setupAccounts()
+	if err != nil {
+		return db, err
+	}
+
+	f, err := os.Open(filepath.Join("testdata", "transactions.tsv"))
+	if err != nil {
+		return db, err
+	}
+	defer f.Close()
+
+	if err := readTransactions(db, f); err != nil {
+		return db, err
+	}
+
+	return db, nil
+}
+
+func dbClean(db *sql.DB) error {
+	_, err := db.Exec("DELETE FROM transactions")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM transactions_history")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM templates_detail")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM templates")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM templates")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM transactions_month")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM transactions_summary")
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("DELETE FROM accounts")
+
+	return err
+}
 
 func equalSlice(a, b []int) bool {
 	if len(a) != len(b) {

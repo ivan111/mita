@@ -55,6 +55,7 @@ var configData = config{
 	},
 }
 
+var testMode = false
 var scanner = bufio.NewScanner(os.Stdin)
 var stdin io.Reader = os.Stdin
 var stdout io.Writer = os.Stdout
@@ -368,6 +369,16 @@ func connectDB() (*sql.DB, error) {
 }
 
 func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, error) {
+	if testMode {
+		s := input()
+		if s == "" {
+			return true, nil
+		}
+
+		dst.Write([]byte(s))
+		return false, nil
+	}
+
 	cmd := exec.Command("fzf", args...)
 
 	stdin, _ := cmd.StdinPipe()

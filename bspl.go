@@ -37,6 +37,10 @@ func cmdBS(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runBS(db)
+}
+
+func runBS(db *sql.DB) error {
 	items, err := dbGetBalances(db)
 	if err != nil {
 		return err
@@ -80,8 +84,16 @@ func cmdBS(context *cli.Context) error {
 }
 
 func cmdPL(context *cli.Context) error {
-	monthStr := context.Args().First()
+	db, err := connectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
 
+	return runPL(db, context.Args().First())
+}
+
+func runPL(db *sql.DB, monthStr string) error {
 	if monthStr == "" {
 		monthStr = "-0" // 今月
 	}
@@ -93,12 +105,6 @@ func cmdPL(context *cli.Context) error {
 
 	println(month2str(month))
 	println()
-
-	db, err := connectDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
 
 	items, err := dbGetGroupedPL(db, month)
 	if err != nil {

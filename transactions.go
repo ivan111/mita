@@ -48,16 +48,19 @@ func cmdListTransactions(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	var transactions []transaction
+	return runListTransactions(db, context.Bool("all"), context.Args().First())
+}
 
-	if context.Bool("all") {
+func runListTransactions(db *sql.DB, isAll bool, monthStr string) error {
+	var transactions []transaction
+	var err error
+
+	if isAll {
 		transactions, err = getTransactions(db, false)
 		if err != nil {
 			return err
 		}
 	} else {
-		monthStr := context.Args().First()
-
 		if monthStr == "" {
 			monthStr = "-0" // 今月
 		}
@@ -116,14 +119,16 @@ func cmdAddTransaction(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runAddTransaction(db, context.Args())
+}
+
+func runAddTransaction(db *sql.DB, args []string) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
 	}
 
 	var d *transaction
-
-	args := context.Args()
 
 	switch len(args) {
 	case 0:
@@ -158,11 +163,9 @@ func cmdAddTransaction(context *cli.Context) error {
 		return errors.New("Usage: mita-cli transaction add date debit credit amount [description] [startMonth endMonth]")
 	}
 
-	if _, err = dbAddTransaction(db, d); err != nil {
-		return err
-	}
+	_, err = dbAddTransaction(db, d)
 
-	return nil
+	return err
 }
 
 func cmdEditTransaction(context *cli.Context) error {
@@ -172,6 +175,10 @@ func cmdEditTransaction(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runEditTransaction(db)
+}
+
+func runEditTransaction(db *sql.DB) error {
 	accounts, err := dbGetAccounts(db)
 	if err != nil {
 		return err
@@ -203,6 +210,10 @@ func cmdRemoveTransaction(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runRemoveTransaction(db)
+}
+
+func runRemoveTransaction(db *sql.DB) error {
 	tr, err := selectTransaction(db)
 	if tr == nil || err != nil {
 		return err
@@ -222,6 +233,10 @@ func cmdUndoTransaction(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runUndoTransaction(db)
+}
+
+func runUndoTransaction(db *sql.DB) error {
 	d, err := selectUndoableHistory(db)
 	if err != nil {
 		return err
@@ -288,11 +303,6 @@ func readTransactions(db *sql.DB, f io.Reader) error {
 
 		arr := strings.Split(line, "\t")
 
-		if !(len(arr) == 4 || len(arr) == 5 || len(arr) == 7) {
-			tx.Rollback()
-			return fmt.Errorf("%d:1行の項目数が4, 5, 7でない", lineNo)
-		}
-
 		d, err := arr2transaction(name2id, arr)
 		if err != nil {
 			tx.Rollback()
@@ -315,6 +325,11 @@ func readTransactions(db *sql.DB, f io.Reader) error {
 }
 
 func arr2transaction(name2id map[string]int, arr []string) (*transaction, error) {
+	arrLen := len(arr)
+	if !(arrLen == 4 || arrLen == 5 || arrLen == 7) {
+		return nil, fmt.Errorf("項目数が4, 5, 7でない")
+	}
+
 	var d transaction
 
 	date, err := str2date(arr[0])
@@ -344,17 +359,28 @@ func arr2transaction(name2id map[string]int, arr []string) (*transaction, error)
 	}
 
 	if len(arr) >= 7 {
-		start, err := str2month(arr[5])
-		if err != nil {
-			return nil, fmt.Errorf("開始月:%s", err)
+		var start int
+		if arr[5] != "0" {
+			start, err = str2month(arr[5])
+			if err != nil {
+				return nil, fmt.Errorf("開始月:%s", err)
+			}
 		}
 		d.start = start
 
-		end, err := str2month(arr[6])
-		if err != nil {
-			return nil, fmt.Errorf("終了月:%s", err)
+		var end int
+		if arr[6] != "0" {
+			end, err = str2month(arr[6])
+			if err != nil {
+				return nil, fmt.Errorf("終了月:%s", err)
+			}
 		}
 		d.end = end
+
+		if (d.start == 0 && d.end != 0) ||
+			(d.start != 0 && d.end == 0) {
+			return nil, fmt.Errorf("開始月と終了月は両方設定するか、両方設定しないかじゃないとダメ。開始月 = %d, 終了月 = %d", d.start, d.end)
+		}
 	}
 
 	return &d, nil
@@ -590,15 +616,22 @@ func tr2alignedString(d *transaction) string {
 		cw = 0
 	}
 
+	note := ""
+	if d.note != "" {
+		note = " " + d.note
+	}
+
 	rng := ""
 
 	if d.start != 0 {
-		rng = fmt.Sprintf("[%s, %s]", month2str(d.start), month2str(d.end))
+		rng = fmt.Sprintf(" [%s, %s]", month2str(d.start), month2str(d.end))
+	} else if note != "" {
+		rng = "                   "
 	}
 
-	return fmt.Sprintf("%s %s%*s %s%*s %9s %18s %s", date,
+	return fmt.Sprintf("%s %s%*s %s%*s %9s%s%s", date,
 		d.debit.name, dw, "", d.credit.name, cw, "",
-		int2str(d.amount), rng, d.note)
+		int2str(d.amount), rng, note)
 }
 
 func getTransactionsReader(transactions []transaction, showSearchWords bool) io.Reader {
@@ -626,6 +659,10 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 	transactions, err := getTransactions(db, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(transactions) == 0 {
+		return nil, nil
 	}
 
 	src := getTransactionsReader(transactions, true)
@@ -737,6 +774,8 @@ func scanRange() (int, int) {
 
 		if err != nil {
 			eprintln(err)
+		} else if end == 0 {
+			eprintln("開始月だけ指定はダメ")
 		} else if start > end {
 			eprintln("開始月 <= 終了月")
 		} else {
