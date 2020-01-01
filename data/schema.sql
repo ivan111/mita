@@ -63,8 +63,8 @@ CREATE TABLE transactions_history (
     transaction_id integer NOT NULL,
     version integer NOT NULL,
     date date NOT NULL,
-    debit_id integer NOT NULL REFERENCES accounts (account_id),
-    credit_id integer NOT NULL REFERENCES accounts (account_id),
+    debit_id integer NOT NULL,
+    credit_id integer NOT NULL,
     amount integer NOT NULL,
     description varchar (64) NOT NULL,
     start_month integer NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE transactions_month (
     tm_id SERIAL,
 
     transaction_id integer NOT NULL,
-    account_id integer NOT NULL REFERENCES accounts (account_id),
+    account_id integer NOT NULL REFERENCES accounts (account_id) ON DELETE CASCADE,
     month integer NOT NULL,
 
     accrual_debit_amount integer NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE transactions_month (
  * このテーブルも自動的に更新される。
  */
 CREATE TABLE transactions_summary (
-    account_id integer NOT NULL REFERENCES accounts (account_id),
+    account_id integer NOT NULL REFERENCES accounts (account_id) ON DELETE CASCADE,
     month integer NOT NULL,
 
     -- 発生主義
@@ -264,9 +264,10 @@ SELECT CASE tr.operation
                 ELSE 'UNKNOWN'
        END AS operation,
        tr.operate_time,
-       tr.transaction_id, tr.version, tr.date, tr.debit_id, de.name AS debit,
-       tr.credit_id, cr.name AS credit, tr.amount,
-       tr.description, tr.start_month, tr.end_month
+       tr.transaction_id, tr.version, tr.date,
+       tr.debit_id, COALESCE(de.name, 'DELETED') AS debit,
+       tr.credit_id, COALESCE(cr.name, 'DELETED') AS credit,
+       tr.amount, tr.description, tr.start_month, tr.end_month
 FROM transactions_history AS tr
 LEFT JOIN accounts AS de ON tr.debit_id = de.account_id
 LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id
