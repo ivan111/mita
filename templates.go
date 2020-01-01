@@ -106,6 +106,10 @@ func cmdAddTemplate(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runAddTemplate(db)
+}
+
+func runAddTemplate(db *sql.DB) error {
 	var tmpl template
 
 	tmpl.name = scanTemplateName()
@@ -299,6 +303,10 @@ func cmdRemoveTemplate(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runRemoveTemplate(db)
+}
+
+func runRemoveTemplate(db *sql.DB) error {
 	tmpl, err := selectTemplate(db)
 	if tmpl == nil || err != nil {
 		return err
@@ -335,6 +343,10 @@ func cmdUseTemplate(context *cli.Context) error {
 	}
 	defer db.Close()
 
+	return runUseTemplate(db)
+}
+
+func runUseTemplate(db *sql.DB) error {
 	tmpl, err := selectTemplate(db)
 	if tmpl == nil || err != nil {
 		return err
@@ -464,6 +476,7 @@ func readTemplates(db *sql.DB, f io.Reader) error {
 
 	scanner := bufio.NewScanner(f)
 
+	var keys []string
 	name2items := make(map[string][]*templateDetail)
 
 	lineNo := 0
@@ -484,6 +497,10 @@ func readTemplates(db *sql.DB, f io.Reader) error {
 			return fmt.Errorf("%d:%s", lineNo, err)
 		}
 
+		if name2items[arr[0]] == nil {
+			keys = append(keys, arr[0])
+		}
+
 		name2items[arr[0]] = append(name2items[arr[0]], d)
 	}
 
@@ -496,7 +513,9 @@ func readTemplates(db *sql.DB, f io.Reader) error {
 		return err
 	}
 
-	for parentName, items := range name2items {
+	for _, parentName := range keys {
+		items := name2items[parentName]
+
 		id, err := dbAddTemplate(tx, parentName)
 		if err != nil {
 			tx.Rollback()

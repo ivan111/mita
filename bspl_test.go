@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestCmdBS(t *testing.T) {
+func TestRunBS(t *testing.T) {
 	buf := new(bytes.Buffer)
 	stdout = buf
 	stderr = new(bytes.Buffer)
@@ -36,7 +36,7 @@ func TestCmdBS(t *testing.T) {
 	}
 }
 
-func TestCmdPL(t *testing.T) {
+func TestRunPL(t *testing.T) {
 	buf := new(bytes.Buffer)
 	stdout = buf
 	stderr = new(bytes.Buffer)

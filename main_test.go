@@ -119,6 +119,64 @@ func equalSlice(a, b []int) bool {
 	return true
 }
 
+func testAccount(t *testing.T, d account, acType int, name string, searchWords string, hasParent bool) {
+	t.Helper()
+
+	if d.accountType != acType {
+		t.Fatalf("wrong account.accountType, got= %d, want = %d", d.accountType, acType)
+	}
+
+	if d.name != name {
+		t.Fatalf("wrong accout.name, got= %s, want = %s", d.name, name)
+	}
+
+	if d.searchWords != searchWords {
+		t.Fatalf("wrong account.searchWords, got= %s, want = %s", d.searchWords, searchWords)
+	}
+
+	if hasParent {
+		if d.parent.id == d.id {
+			t.Fatal("d.parent.id == d.id")
+		}
+	} else {
+		if d.parent.id != d.id {
+			t.Fatal("d.parent.id != d.id")
+		}
+	}
+}
+
+func testTransaction(t *testing.T, d transaction, date string, debit string, credit string, amount int, note string, start int, end int) {
+	t.Helper()
+
+	if d.date.Format("2006-01-02") != date {
+		t.Fatalf("wrong transaction.date, got= %s, want = %s", d.date.Format("2006-01-02"), date)
+	}
+
+	if d.debit.name != debit {
+		t.Fatalf("wrong transaction.debit.name, got= %s, want = %s", d.debit.name, debit)
+	}
+
+	if d.credit.name != credit {
+		t.Fatalf("wrong transaction.credit.name, got= %s, want = %s", d.credit.name, credit)
+	}
+
+	if d.amount != amount {
+		t.Fatalf("wrong transaction.amount, got= %d, want = %d", d.amount, amount)
+	}
+
+	if d.note != note {
+		t.Fatalf("wrong transaction.note, got= %s, want = %s", d.note, note)
+	}
+
+	if d.start != start {
+		t.Fatalf("wrong transaction.start, got= %d, want = %d", d.start, start)
+	}
+
+	if d.end != end {
+		t.Fatalf("wrong transaction.end, got= %d, want = %d", d.end, end)
+	}
+}
+
 type readOrderTest struct {
 	argText     string
 	argNumItems int

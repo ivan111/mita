@@ -40,27 +40,7 @@ func TestTransactionCommands(t *testing.T) {
 			t.Fatal("len(transactions) != 1:", len(transactions))
 		}
 
-		d := transactions[0]
-
-		if d.date.Format("2006-01-02") != "2019-11-03" {
-			t.Fatal(`d.date.Format("2006-01-02") != "2019-11-03":`, d.date.Format("2006-01-02"))
-		}
-
-		if d.debit.name != "食費" {
-			t.Fatal(`d.debit.name != "食費":`, d.debit.name)
-		}
-
-		if d.credit.name != "現金" {
-			t.Fatal(`d.credit.name != "現金":`, d.credit.name)
-		}
-
-		if d.amount != 3000 {
-			t.Fatal("d.amount != 3000:", d.amount)
-		}
-
-		if d.note != "もやし、鶏卵等" {
-			t.Fatal(`d.note != "もやし、鶏卵等":`, d.note)
-		}
+		testTransaction(t, transactions[0], "2019-11-03", "食費", "現金", 3000, "もやし、鶏卵等", 0, 0)
 	})
 
 	t.Run("TestRunAddTransactionArgs", func(t *testing.T) {
@@ -86,6 +66,8 @@ func TestTransactionCommands(t *testing.T) {
 		if len(transactions) != 1 {
 			t.Fatal("len(transactions) != 1:", len(transactions))
 		}
+
+		testTransaction(t, transactions[0], "2019-12-20", "年金保険料", "A銀行", 379640, "2年前納", 201912, 202111)
 	})
 
 	t.Run("TestRunListTransaction", func(t *testing.T) {
@@ -181,13 +163,7 @@ func TestTransactionCommands(t *testing.T) {
 			t.Fatal("len(transactions) != 1:", len(transactions))
 		}
 
-		d := transactions[0]
-		if d.date.Format("2006-01-02") != "2018-09-02" ||
-			d.debit.name != "保険" || d.credit.name != "A銀行" ||
-			d.amount != 15000 || d.note != "任意保険" ||
-			d.start != 201810 || d.end != 201909 {
-			t.Fatal("d != want:", &d)
-		}
+		testTransaction(t, transactions[0], "2018-09-02", "保険", "A銀行", 15000, "任意保険", 201810, 201909)
 	})
 
 	t.Run("TestRunRemoveTransaction", func(t *testing.T) {

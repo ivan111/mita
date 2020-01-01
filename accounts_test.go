@@ -14,7 +14,7 @@ func TestAccountCommands(t *testing.T) {
 	stdout = new(bytes.Buffer)
 	stderr = new(bytes.Buffer)
 
-	t.Run("TestRunAddAccountArgs0", func(t *testing.T) {
+	t.Run("TestRunAddAccount", func(t *testing.T) {
 		db, err := setup()
 		if db != nil {
 			defer db.Close()
@@ -39,23 +39,7 @@ func TestAccountCommands(t *testing.T) {
 			t.Fatal("len(accounts) != 1:", len(accounts))
 		}
 
-		d := accounts[0]
-
-		if d.accountType != acTypeEquity {
-			t.Fatal("d.accountType != acTypeEquity:", d.accountType)
-		}
-
-		if d.name != "開始残高" {
-			t.Fatal(`d.name != "開始残高":`, d.name)
-		}
-
-		if d.searchWords != "kaisi zandaka" {
-			t.Fatal(`d.searchWords != "kaisi zandaka":`, d.searchWords)
-		}
-
-		if d.parent.id != d.id {
-			t.Fatal("d.parent.id != d.id")
-		}
+		testAccount(t, accounts[0], acTypeEquity, "開始残高", "kaisi zandaka", false)
 	})
 
 	t.Run("TestRunAddAccountArgs", func(t *testing.T) {
@@ -80,6 +64,8 @@ func TestAccountCommands(t *testing.T) {
 		if len(accounts) != 1 {
 			t.Fatal("len(accounts) != 1:", len(accounts))
 		}
+
+		testAccount(t, accounts[0], acTypeAsset, "現金", "genkin", false)
 	})
 
 	t.Run("TestRunListAccounts", func(t *testing.T) {
@@ -151,19 +137,7 @@ func TestAccountCommands(t *testing.T) {
 			t.Fatal("len(accounts) != 2:", len(accounts))
 		}
 
-		d := accounts[1]
-
-		if d.name != "自動車" {
-			t.Fatal(`d.name != "自動車":`, d.name)
-		}
-
-		if d.searchWords != "jidousya" {
-			t.Fatal(`d.searchWords != "jidousya":`, d.searchWords)
-		}
-
-		if d.parent.id != d.id {
-			t.Fatal("d.parent.id != d.id")
-		}
+		testAccount(t, accounts[1], acTypeExpense, "自動車", "jidousya", false)
 	})
 
 	t.Run("TestRunRemoveAccount", func(t *testing.T) {
