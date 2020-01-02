@@ -1,0 +1,52 @@
+# 勘定科目のデータ例
+# 1行で1つの勘定科目を表し、タブ区切りで項目を区別する。
+# 先頭が#で始まる行はコメントであり、その行は無視される。
+#
+# 項目
+# * タイプ ：1:資産, 2:負債, 3:収入, 4:費用, 5:その他
+# * 名前   : 勘定科目名。最大8文字まで。同じ名前が2つ以上あってはだめ
+# * 検索語 : fzfで検索するときに便利なように入力
+# * 親     : たとえば、"所得税"の親に"税金"を入力など。
+#            前の行にある勘定科目しか親にできない。
+
+資本	開始残高	kaisi zandaka	
+
+資産	現金	genkin cash	
+資産	A銀行	ginkou bank	
+資産	B銀行	ginkou bank	
+資産	未収入金	misyuunyuukin	
+資産	前払費用	maebarai hiyou	
+
+負債	Aカード	card	
+
+収入	給与	kyuuyo kyuuryou	
+収入	賞与	syouyo bonus	
+収入	受取利息	uketoririsoku	
+収入	その他収入	sonotasyuunyuu	
+
+費用	家賃	yatin	
+費用	食費	syokuhi	
+費用	水道光熱費	suidoukounetuhi	
+費用	電気代	denkidai	水道光熱費
+費用	ガス代	gasudai	水道光熱費
+費用	水道料	suidouryou	水道光熱費
+費用	衣料品	iryouhin	
+費用	医療費	iryouhi	
+費用	電話	denwa phone	
+費用	娯楽	goraku	
+費用	贈答	zoutou	
+費用	雑費	zappi	
+費用	支払手数料	siharaitesuuryou	
+費用	調整	tyousei	
+費用	保険	hoken	
+費用	年金保険料	nenkin	保険
+費用	健康保険	kenkouhoken	保険
+費用	雇用保険	koyouhoken	保険
+費用	税金	zeikin tax	
+費用	所得税	syotokuzei	税金
+費用	住民税	juuminzei	税金
+費用	自動車	jidousya car	
+費用	ガソリン代	gasorin	自動車
+費用	駐車料	tyuusyaryou	自動車
+
+#費用	交通費	koutuuhi	
