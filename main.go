@@ -261,6 +261,11 @@ func main() {
 				Action: cmdServer,
 			},
 			{
+				Name:   "data",
+				Usage:  "データを出力",
+				Action: cmdData,
+			},
+			{
 				Name:   "undo",
 				Usage:  "取引への操作を元に戻す",
 				Action: cmdUndoTransaction,

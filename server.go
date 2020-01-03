@@ -14,7 +14,11 @@ import (
 )
 
 func cmdServer(context *cli.Context) error {
-	statikFS, _ := fs.New()
+	statikFS, err := fs.New()
+	if err != nil {
+		return err
+	}
+
 	fs := http.FileServer(statikFS)
 	http.Handle("/", fs)
 	http.HandleFunc("/api/bp", apiBPHandler)
