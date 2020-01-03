@@ -68,12 +68,6 @@ func main() {
 		return
 	}
 
-	_, err = exec.LookPath("fzf")
-	if err != nil {
-		eprintln("実行ファイル'fzf'が見つからない")
-		return
-	}
-
 	app := &cli.App{
 		Name:    appName,
 		Usage:   "家計簿のミタ",
@@ -373,6 +367,8 @@ func connectDB() (*sql.DB, error) {
 	return sql.Open("postgres", dataSrcName)
 }
 
+var isFirstRunFzf = true
+
 func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, error) {
 	if testMode {
 		s := input()
@@ -382,6 +378,15 @@ func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, e
 
 		dst.Write([]byte(s))
 		return false, nil
+	}
+
+	if isFirstRunFzf {
+		_, err := exec.LookPath("fzf")
+		if err != nil {
+			return false, errors.New("実行ファイル'fzf'が見つからない")
+		}
+
+		isFirstRunFzf = false
 	}
 
 	cmd := exec.Command("fzf", args...)
