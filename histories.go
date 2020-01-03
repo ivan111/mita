@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"io"
 	"os"
 	"strconv"

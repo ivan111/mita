@@ -9,7 +9,7 @@ import (
 	_ "github.com/ivan111/mita/statik"
 	_ "github.com/lib/pq"
 	"github.com/rakyll/statik/fs"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"net/http"
 )
 

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	_ "github.com/lib/pq"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/text/width"
 	"io"
 	"io/ioutil"
@@ -74,197 +74,197 @@ func main() {
 		return
 	}
 
-	app := cli.NewApp()
-
-	app.Name = appName
-	app.Usage = "家計簿のミタ"
-	app.Version = version
-
-	app.Commands = []cli.Command{
-		{
-			Name:    "transaction",
-			Aliases: []string{"tr"},
-			Usage:   "取引のオプション",
-			Subcommands: []cli.Command{
-				{
-					Name:    "list",
-					Aliases: []string{"ls"},
-					Usage:   "取引を一覧",
-					Flags: []cli.Flag{
-						cli.BoolFlag{Name: "all, a"},
+	app := &cli.App{
+		Name:    appName,
+		Usage:   "家計簿のミタ",
+		Version: version,
+		Commands: []*cli.Command{
+			{
+				Name:    "transaction",
+				Aliases: []string{"tr"},
+				Usage:   "取引のオプション",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Aliases: []string{"ls"},
+						Usage:   "取引を一覧",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{Name: "all", Aliases: []string{"a"}},
+						},
+						Action: cmdListTransactions,
 					},
-					Action: cmdListTransactions,
-				},
-				{
-					Name:    "search",
-					Aliases: []string{"s"},
-					Usage:   "取引を検索",
-					Action:  cmdSearchTransaction,
-				},
-				{
-					Name:    "add",
-					Aliases: []string{"a"},
-					Usage:   "取引を追加",
-					Action:  cmdAddTransaction,
-				},
-				{
-					Name:    "edit",
-					Aliases: []string{"e"},
-					Usage:   "取引を編集",
-					Action:  cmdEditTransaction,
-				},
-				{
-					Name:    "remove",
-					Aliases: []string{"r"},
-					Usage:   "取引を削除",
-					Action:  cmdRemoveTransaction,
-				},
-				{
-					Name:   "import",
-					Usage:  "取引のインポート",
-					Action: cmdImportTransactions,
-				},
-				{
-					Name:   "export",
-					Usage:  "取引のエクスポート",
-					Action: cmdExportTransactions,
-				},
-			},
-		},
-		{
-			Name:    "account",
-			Aliases: []string{"ac"},
-			Usage:   "勘定科目のオプション",
-			Subcommands: []cli.Command{
-				{
-					Name:    "list",
-					Aliases: []string{"ls"},
-					Usage:   "勘定科目を一覧",
-					Action:  cmdListAccounts,
-				},
-				{
-					Name:    "add",
-					Aliases: []string{"a"},
-					Usage:   "勘定科目を追加",
-					Action:  cmdAddAccount,
-				},
-				{
-					Name:    "edit",
-					Aliases: []string{"e"},
-					Usage:   "勘定科目を編集",
-					Action:  cmdEditAccount,
-				},
-				{
-					Name:    "remove",
-					Aliases: []string{"r"},
-					Usage:   "勘定科目を削除",
-					Action:  cmdRemoveAccount,
-				},
-				{
-					Name:    "order",
-					Aliases: []string{"o"},
-					Usage:   "勘定科目の並べ替え",
-					Action:  cmdReorderAccount,
-				},
-				{
-					Name:   "import",
-					Usage:  "勘定科目のインポート",
-					Action: cmdImportAccounts,
-				},
-				{
-					Name:   "export",
-					Usage:  "勘定科目のエクスポート",
-					Action: cmdExportAccounts,
-				},
-			},
-		},
-		{
-			Name:    "template",
-			Aliases: []string{"te"},
-			Usage:   "テンプレートのオプション",
-			Subcommands: []cli.Command{
-				{
-					Name:    "list",
-					Aliases: []string{"ls"},
-					Usage:   "テンプレートを一覧",
-					Action:  cmdListTemplates,
-				},
-				{
-					Name:    "add",
-					Aliases: []string{"a"},
-					Usage:   "テンプレートを追加",
-					Action:  cmdAddTemplate,
-				},
-				{
-					Name:    "edit",
-					Aliases: []string{"e"},
-					Usage:   "テンプレートを編集",
-					Action:  cmdEditTemplate,
-				},
-				{
-					Name:    "remove",
-					Aliases: []string{"r"},
-					Usage:   "テンプレートを削除",
-					Action:  cmdRemoveTemplate,
-				},
-				{
-					Name:    "use",
-					Aliases: []string{"u"},
-					Usage:   "テンプレートを使用",
-					Action:  cmdUseTemplate,
-				},
-				{
-					Name:   "import",
-					Usage:  "テンプレートのインポート",
-					Action: cmdImportTemplate,
-				},
-				{
-					Name:   "export",
-					Usage:  "テンプレートのエクスポート",
-					Action: cmdExportTemplates,
-				},
-			},
-		},
-		{
-			Name:  "history",
-			Usage: "履歴のオプション",
-			Subcommands: []cli.Command{
-				{
-					Name:    "list",
-					Aliases: []string{"ls"},
-					Usage:   "履歴を一覧",
-					Flags: []cli.Flag{
-						cli.BoolFlag{Name: "all, a"},
+					{
+						Name:    "search",
+						Aliases: []string{"s"},
+						Usage:   "取引を検索",
+						Action:  cmdSearchTransaction,
 					},
-					Action: cmdListHistory,
+					{
+						Name:    "add",
+						Aliases: []string{"a"},
+						Usage:   "取引を追加",
+						Action:  cmdAddTransaction,
+					},
+					{
+						Name:    "edit",
+						Aliases: []string{"e"},
+						Usage:   "取引を編集",
+						Action:  cmdEditTransaction,
+					},
+					{
+						Name:    "remove",
+						Aliases: []string{"r"},
+						Usage:   "取引を削除",
+						Action:  cmdRemoveTransaction,
+					},
+					{
+						Name:   "import",
+						Usage:  "取引のインポート",
+						Action: cmdImportTransactions,
+					},
+					{
+						Name:   "export",
+						Usage:  "取引のエクスポート",
+						Action: cmdExportTransactions,
+					},
 				},
 			},
-		},
-		{
-			Name:   "bs",
-			Usage:  "資産・負債の一覧",
-			Action: cmdBS,
-		},
-		{
-			Name:   "pl",
-			Usage:  "月の収入・費用の一覧",
-			Action: cmdPL,
-		},
-		{
-			Name:  "server",
-			Usage: "グラフサイトを表示するHTTPサーバを起動",
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "port, p",
-					Value: configData.Server.Port,
+			{
+				Name:    "account",
+				Aliases: []string{"ac"},
+				Usage:   "勘定科目のオプション",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Aliases: []string{"ls"},
+						Usage:   "勘定科目を一覧",
+						Action:  cmdListAccounts,
+					},
+					{
+						Name:    "add",
+						Aliases: []string{"a"},
+						Usage:   "勘定科目を追加",
+						Action:  cmdAddAccount,
+					},
+					{
+						Name:    "edit",
+						Aliases: []string{"e"},
+						Usage:   "勘定科目を編集",
+						Action:  cmdEditAccount,
+					},
+					{
+						Name:    "remove",
+						Aliases: []string{"r"},
+						Usage:   "勘定科目を削除",
+						Action:  cmdRemoveAccount,
+					},
+					{
+						Name:    "order",
+						Aliases: []string{"o"},
+						Usage:   "勘定科目の並べ替え",
+						Action:  cmdReorderAccount,
+					},
+					{
+						Name:   "import",
+						Usage:  "勘定科目のインポート",
+						Action: cmdImportAccounts,
+					},
+					{
+						Name:   "export",
+						Usage:  "勘定科目のエクスポート",
+						Action: cmdExportAccounts,
+					},
 				},
 			},
-			Action: cmdServer,
-		},
-		{
-			Name:   "undo",
-			Usage:  "取引への操作を元に戻す",
-			Action: cmdUndoTransaction,
+			{
+				Name:    "template",
+				Aliases: []string{"te"},
+				Usage:   "テンプレートのオプション",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Aliases: []string{"ls"},
+						Usage:   "テンプレートを一覧",
+						Action:  cmdListTemplates,
+					},
+					{
+						Name:    "add",
+						Aliases: []string{"a"},
+						Usage:   "テンプレートを追加",
+						Action:  cmdAddTemplate,
+					},
+					{
+						Name:    "edit",
+						Aliases: []string{"e"},
+						Usage:   "テンプレートを編集",
+						Action:  cmdEditTemplate,
+					},
+					{
+						Name:    "remove",
+						Aliases: []string{"r"},
+						Usage:   "テンプレートを削除",
+						Action:  cmdRemoveTemplate,
+					},
+					{
+						Name:    "use",
+						Aliases: []string{"u"},
+						Usage:   "テンプレートを使用",
+						Action:  cmdUseTemplate,
+					},
+					{
+						Name:   "import",
+						Usage:  "テンプレートのインポート",
+						Action: cmdImportTemplate,
+					},
+					{
+						Name:   "export",
+						Usage:  "テンプレートのエクスポート",
+						Action: cmdExportTemplates,
+					},
+				},
+			},
+			{
+				Name:  "history",
+				Usage: "履歴のオプション",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Aliases: []string{"ls"},
+						Usage:   "履歴を一覧",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{Name: "all", Aliases: []string{"a"}},
+						},
+						Action: cmdListHistory,
+					},
+				},
+			},
+			{
+				Name:   "bs",
+				Usage:  "資産・負債の一覧",
+				Action: cmdBS,
+			},
+			{
+				Name:   "pl",
+				Usage:  "月の収入・費用の一覧",
+				Action: cmdPL,
+			},
+			{
+				Name:  "server",
+				Usage: "グラフサイトを表示するHTTPサーバを起動",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:    "port",
+						Aliases: []string{"p"},
+						Value:   configData.Server.Port,
+					},
+				},
+				Action: cmdServer,
+			},
+			{
+				Name:   "undo",
+				Usage:  "取引への操作を元に戻す",
+				Action: cmdUndoTransaction,
+			},
 		},
 	}
 

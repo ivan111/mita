@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"io"
 	"math"
 	"os"
@@ -119,7 +119,7 @@ func cmdAddTransaction(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	return runAddTransaction(db, context.Args())
+	return runAddTransaction(db, context.Args().Slice())
 }
 
 func runAddTransaction(db *sql.DB, args []string) error {

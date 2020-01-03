@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"io"
 	"os"
 	"strconv"
@@ -68,7 +68,7 @@ func cmdAddAccount(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	return runAddAccount(db, context.Args())
+	return runAddAccount(db, context.Args().Slice())
 }
 
 func runAddAccount(db *sql.DB, args []string) error {
