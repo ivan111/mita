@@ -160,7 +160,7 @@ func runAddTransaction(db *sql.DB, args []string) error {
 			return err
 		}
 	default:
-		return errors.New("Usage: mita-cli transaction add date debit credit amount [description] [startMonth endMonth]")
+		return errors.New("Usage: mita transaction add date debit credit amount [description] [startMonth endMonth]")
 	}
 
 	_, err = dbAddTransaction(db, d)

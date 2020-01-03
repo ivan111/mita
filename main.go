@@ -23,8 +23,8 @@ import (
 	"unicode/utf8"
 )
 
-const appName = "mita-cli"
-const version = "0.2.0"
+const appName = "mita"
+const version = "0.9.0"
 
 const defaultDBName = "mita"
 const defaultPort = 5001
@@ -76,8 +76,8 @@ func main() {
 
 	app := cli.NewApp()
 
-	app.Name = "mita-cli"
-	app.Usage = "家計簿のミタCLI"
+	app.Name = appName
+	app.Usage = "家計簿のミタ"
 	app.Version = version
 
 	app.Commands = []cli.Command{

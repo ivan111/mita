@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/ivan111/mita-cli/statik"
+	_ "github.com/ivan111/mita/statik"
 	_ "github.com/lib/pq"
 	"github.com/rakyll/statik/fs"
 	"github.com/urfave/cli"

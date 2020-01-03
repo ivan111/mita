@@ -1,4 +1,4 @@
-module github.com/ivan111/mita-cli
+module github.com/ivan111/mita
 
 go 1.13
 

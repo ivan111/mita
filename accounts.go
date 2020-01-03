@@ -106,7 +106,7 @@ func runAddAccount(db *sql.DB, args []string) error {
 			return err
 		}
 	default:
-		return errors.New("Usage: mita-cli account add accountType name [searchWords] [parent]")
+		return errors.New("Usage: mita account add accountType name [searchWords] [parent]")
 	}
 
 	if _, err = dbAddAccount(db, d); err != nil {
