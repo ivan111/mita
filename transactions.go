@@ -662,7 +662,7 @@ func selectTransaction(db *sql.DB) (*transaction, error) {
 	}
 
 	if len(transactions) == 0 {
-		return nil, nil
+		return nil, errors.New("取引が1件も登録されてない")
 	}
 
 	src := getTransactionsReader(transactions, true)

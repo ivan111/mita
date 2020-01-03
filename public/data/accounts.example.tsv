@@ -9,7 +9,7 @@
 # * 親     : たとえば、"所得税"の親に"税金"を入力など。
 #            前の行にある勘定科目しか親にできない。
 
-資本	開始残高	kaisi zandaka	
+資本	開始残高	kaisizandaka	
 
 資産	現金	genkin cash	
 資産	A銀行	ginkou bank	

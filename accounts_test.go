@@ -23,7 +23,7 @@ func TestAccountCommands(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		stdin = bytes.NewBufferString("5\n開始残高\nkaisi zandaka\n\ny\n")
+		stdin = bytes.NewBufferString("5\n開始残高\nkaisizandaka\n\ny\n")
 		scanner = bufio.NewScanner(stdin)
 
 		if err := runAddAccount(db, nil); err != nil {
@@ -39,7 +39,7 @@ func TestAccountCommands(t *testing.T) {
 			t.Fatal("len(accounts) != 1:", len(accounts))
 		}
 
-		testAccount(t, accounts[0], acTypeEquity, "開始残高", "kaisi zandaka", false)
+		testAccount(t, accounts[0], acTypeEquity, "開始残高", "kaisizandaka", false)
 	})
 
 	t.Run("TestRunAddAccountArgs", func(t *testing.T) {

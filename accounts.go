@@ -482,16 +482,18 @@ func confirmAccount(accounts []account, d *account, enableType bool) (bool, erro
 		case "n", "name":
 			d.name = scanAccountName()
 		case "p", "parent":
-			parent, err := selectAccount(accounts, "親")
-			if err != nil {
-				return false, err
-			}
-			if parent != nil {
-				d.parent.id = parent.id
-				d.parent.name = parent.name
-			} else {
-				d.parent.id = 0
-				d.parent.name = ""
+			if len(accounts) != 0 {
+				parent, err := selectAccount(accounts, "親")
+				if err != nil {
+					return false, err
+				}
+				if parent != nil {
+					d.parent.id = parent.id
+					d.parent.name = parent.name
+				} else {
+					d.parent.id = 0
+					d.parent.name = ""
+				}
 			}
 		case "s", "search words":
 			d.searchWords = scanSearchWords()
@@ -712,7 +714,7 @@ func getAccountsReader(accounts []account) io.Reader {
 
 func selectAccount(accounts []account, header string) (*account, error) {
 	if len(accounts) == 0 {
-		return nil, nil
+		return nil, errors.New("勘定科目が1件も登録されてない")
 	}
 
 	src := getAccountsReader(accounts)
@@ -750,14 +752,6 @@ func scanAccount(accounts []account) (*account, error) {
 	d.accountType = scanAccountType()
 	d.name = scanAccountName()
 	d.searchWords = scanSearchWords()
-	parent, err := selectAccount(accounts, "親")
-	if err != nil {
-		return nil, err
-	}
-	if parent != nil {
-		d.parent.id = parent.id
-		d.parent.name = parent.name
-	}
 
 	return &d, nil
 }
