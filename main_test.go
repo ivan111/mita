@@ -65,42 +65,7 @@ func setupAcAndTr() (*sql.DB, error) {
 }
 
 func dbClean(db *sql.DB) error {
-	_, err := db.Exec("DELETE FROM transactions")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM transactions_history")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM templates_detail")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM templates")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM templates")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM transactions_month")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM transactions_summary")
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("DELETE FROM accounts")
+	_, err := db.Exec("TRUNCATE transactions, transactions_history, templates_detail, templates, transactions_month, transactions_summary, accounts RESTART IDENTITY")
 
 	return err
 }
