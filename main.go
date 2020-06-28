@@ -238,8 +238,11 @@ func main() {
 				Action: cmdBS,
 			},
 			{
-				Name:   "pl",
-				Usage:  "月の収入・費用の一覧",
+				Name:  "pl",
+				Usage: "月の収入・費用の一覧",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "cash", Aliases: []string{"c"}},
+				},
 				Action: cmdPL,
 			},
 			{

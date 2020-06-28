@@ -132,7 +132,7 @@ func getPLAmountMap(db *sql.DB, keys []string) ([]map[string]int, error) {
 	for i := 0; i < 12; i++ {
 		item2amount := make(map[string]int)
 
-		items, err := dbGetGroupedPL(db, month)
+		items, err := dbGetGroupedPL(db, false, month)
 		if err != nil {
 			return nil, err
 		}

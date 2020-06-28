@@ -184,13 +184,20 @@ SELECT ts.month,
        SUM(CASE WHEN ac.account_type = 3 THEN accrual_credit_amount - accrual_debit_amount
                 WHEN ac.account_type = 4 THEN accrual_debit_amount - accrual_credit_amount
            ELSE 0 END)
-       AS balance
+       AS accrual_balance,
+       SUM(CASE WHEN ac.account_type = 3 THEN cash_credit_amount - cash_debit_amount
+                WHEN ac.account_type = 4 THEN cash_debit_amount - cash_credit_amount
+           ELSE 0 END)
+       AS cash_balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
 WHERE ac.account_type = 3 OR ac.account_type = 4
 GROUP BY ts.month, ac.account_id, ac.account_type, ac.name, ac.parent
 HAVING SUM(CASE WHEN ac.account_type = 3 THEN accrual_credit_amount - accrual_debit_amount
                 WHEN ac.account_type = 4 THEN accrual_debit_amount - accrual_credit_amount
+           ELSE 0 END) <> 0
+       OR SUM(CASE WHEN ac.account_type = 3 THEN cash_credit_amount - cash_debit_amount
+                WHEN ac.account_type = 4 THEN cash_debit_amount - cash_credit_amount
            ELSE 0 END) <> 0
 ORDER BY ac.account_type, ac.order_no, ac.account_id;
 
@@ -199,11 +206,11 @@ ORDER BY ac.account_type, ac.order_no, ac.account_id;
  * 大分類のみのP/L
  */
 CREATE OR REPLACE VIEW grouped_pl_view AS
-SELECT pl.month, ac.account_id, ac.account_type, ac.name, SUM(pl.balance) AS balance
+SELECT pl.month, ac.account_id, ac.account_type, ac.name, SUM(pl.accrual_balance) AS accrual_balance, SUM(pl.cash_balance) AS cash_balance
 FROM pl_view AS pl
 LEFT JOIN accounts AS ac ON pl.parent = ac.account_id
 GROUP BY pl.month, ac.account_id, ac.account_type, ac.name
-HAVING SUM(pl.balance) <> 0
+HAVING SUM(pl.accrual_balance) <> 0 OR SUM(pl.cash_balance) <> 0
 ORDER BY ac.account_type, ac.order_no, ac.account_id;
 
 

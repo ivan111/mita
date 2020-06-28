@@ -90,10 +90,10 @@ func cmdPL(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	return runPL(db, context.Args().First())
+	return runPL(db, context.Bool("cash"), context.Args().First())
 }
 
-func runPL(db *sql.DB, monthStr string) error {
+func runPL(db *sql.DB, isCash bool, monthStr string) error {
 	if monthStr == "" {
 		monthStr = "-0" // 今月
 	}
@@ -106,12 +106,12 @@ func runPL(db *sql.DB, monthStr string) error {
 	println(month2str(month))
 	println()
 
-	items, err := dbGetGroupedPL(db, month)
+	items, err := dbGetGroupedPL(db, isCash, month)
 	if err != nil {
 		return err
 	}
 
-	p2d, err := dbGetPL(db, month)
+	p2d, err := dbGetPL(db, isCash, month)
 	if err != nil {
 		return err
 	}
@@ -190,14 +190,27 @@ func dbGetBalances(db *sql.DB) ([]summary, error) {
 	return balances, nil
 }
 
-const sqlGetGroupedPL = `
-SELECT account_id, account_type, name, balance
+const sqlGetGroupedPLAccrual = `
+SELECT account_id, account_type, name, accrual_balance
 FROM grouped_pl_view
 WHERE month = $1
 `
 
-func dbGetGroupedPL(db *sql.DB, month int) ([]summary, error) {
-	rows, err := db.Query(sqlGetGroupedPL, month)
+const sqlGetGroupedPLCash = `
+SELECT account_id, account_type, name, cash_balance
+FROM grouped_pl_view
+WHERE month = $1
+`
+
+func dbGetGroupedPL(db *sql.DB, isCash bool, month int) ([]summary, error) {
+	var sqlStr string
+	if isCash {
+		sqlStr = sqlGetGroupedPLCash
+	} else {
+		sqlStr = sqlGetGroupedPLAccrual
+	}
+
+	rows, err := db.Query(sqlStr, month)
 	if err != nil {
 		return nil, err
 	}
@@ -218,14 +231,27 @@ func dbGetGroupedPL(db *sql.DB, month int) ([]summary, error) {
 	return balances, nil
 }
 
-const sqlGetPL = `
-SELECT account_id, account_type, name, parent, balance
+const sqlGetPLAccrual = `
+SELECT account_id, account_type, name, parent, accrual_balance
 FROM pl_view
 WHERE month = $1
 `
 
-func dbGetPL(db *sql.DB, month int) (map[int][]summary, error) {
-	rows, err := db.Query(sqlGetPL, month)
+const sqlGetPLCash = `
+SELECT account_id, account_type, name, parent, cash_balance
+FROM pl_view
+WHERE month = $1
+`
+
+func dbGetPL(db *sql.DB, isCash bool, month int) (map[int][]summary, error) {
+	var sqlStr string
+	if isCash {
+		sqlStr = sqlGetPLCash
+	} else {
+		sqlStr = sqlGetPLAccrual
+	}
+
+	rows, err := db.Query(sqlStr, month)
 	if err != nil {
 		return nil, err
 	}
