@@ -1,6 +1,6 @@
 package main
 
-//go:generate statik
+//go:generate statik -f
 
 import (
 	"database/sql"
