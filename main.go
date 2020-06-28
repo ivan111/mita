@@ -374,7 +374,11 @@ var isFirstRunFzf = true
 
 func fzf(src io.Reader, dst io.Writer, errDst io.Writer, args []string) (bool, error) {
 	if testMode {
-		s := input()
+		s, err := input()
+		if err != nil {
+			return false, err
+		}
+
 		if s == "" {
 			return true, nil
 		}
@@ -551,19 +555,29 @@ func readOrder(text string, numItems int) ([]int, error) {
 
 func confirmYesNo(msg string) bool {
 	print(msg, " (y[es]/[no]): ")
-	ans := strings.ToLower(input())
+	s, _ := input()
+	ans := strings.ToLower(s)
 	return ans == "y" || ans == "yes"
 }
 
-func input() string {
-	scanner.Scan()
-	return scanner.Text()
+func input() (string, error) {
+	if scanner.Scan() == false {
+		err := scanner.Err()
+		if err == nil {
+			scanner = bufio.NewScanner(os.Stdin)
+			return "", io.EOF
+		}
+
+		return "", err
+	}
+
+	return scanner.Text(), nil
 }
 
 func scanInt(prompt string, minValue int, maxValue int) int {
 	for {
 		print(prompt + ": ")
-		text := input()
+		text, _ := input()
 		v, err := strconv.Atoi(text)
 
 		if v >= minValue && v <= maxValue {
@@ -581,7 +595,7 @@ func scanInt(prompt string, minValue int, maxValue int) int {
 func scanText(prompt string, minLen int, maxLen int) string {
 	for {
 		print(prompt + ": ")
-		text := input()
+		text, _ := input()
 		textLen := utf8.RuneCountInString(text)
 
 		if textLen >= minLen && textLen <= maxLen {

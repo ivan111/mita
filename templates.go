@@ -171,7 +171,11 @@ func editTemplate(db *sql.DB, tmpl *template) error {
 		a = "add"
 	} else {
 		print(q)
-		a = strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return err
+		}
+		a = strings.ToLower(s)
 	}
 
 	for a != "q" {
@@ -273,7 +277,11 @@ func editTemplate(db *sql.DB, tmpl *template) error {
 		}
 
 		print(q)
-		a = strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return err
+		}
+		a = strings.ToLower(s)
 	}
 
 	return nil
@@ -611,7 +619,11 @@ func confirmTemplate(accounts []account, d *templateDetail) (bool, error) {
 		println(d)
 
 		print("y(es), l(eft), r(ight), a(mount), n(ote), q(uit): ")
-		a := strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return false, err
+		}
+		a := strings.ToLower(s)
 
 		switch a {
 		case "q", "quit":
@@ -652,7 +664,11 @@ func confirmUseTemplate(accounts []account, trs []transaction) (bool, error) {
 		}
 
 		print(q)
-		a := strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return false, err
+		}
+		a := strings.ToLower(s)
 
 		switch a {
 		case "q", "quit":

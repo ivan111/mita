@@ -419,7 +419,11 @@ func confirmTransaction(accounts []account, tr *transaction) (bool, error) {
 		println(tr)
 
 		print("y(es), d(ate), l(eft), r(ight), a(mount), n(ote), s(tart-end), q(uit): ")
-		a := strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return false, err
+		}
+		a := strings.ToLower(s)
 
 		switch a {
 		case "q", "quit":
@@ -724,9 +728,14 @@ func scanTransaction(accounts []account) (*transaction, error) {
 }
 
 func scanDate() time.Time {
+	var date time.Time
+
 	for {
 		print("日付: ")
-		date, err := str2date(input())
+		s, err := input()
+		if err == nil {
+			date, err = str2date(s)
+		}
 
 		if err != nil {
 			eprintln(err)
@@ -747,8 +756,12 @@ func scanNote() string {
 
 func scanMonth(name string) (int, error) {
 	print(name + ": ")
+	s, err := input()
+	if err != nil {
+		return 0, err
+	}
 
-	return str2month(input())
+	return str2month(s)
 }
 
 func scanRange() (int, int) {

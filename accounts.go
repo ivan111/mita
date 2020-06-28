@@ -468,7 +468,11 @@ func confirmAccount(accounts []account, d *account, enableType bool) (bool, erro
 		} else {
 			print("y(es), n(ame), s(earch words), p(arent), q(uit): ")
 		}
-		a := strings.ToLower(input())
+		s, err := input()
+		if err != nil {
+			return false, err
+		}
+		a := strings.ToLower(s)
 
 		switch a {
 		case "q", "quit":
