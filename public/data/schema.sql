@@ -241,23 +241,13 @@ LEFT JOIN accounts AS cr ON tr.credit_id = cr.account_id;
  * 残高ビュー
  */
 CREATE OR REPLACE VIEW balance_view AS
-WITH T AS (
-    SELECT ts.*,
-    CASE ac.account_type
-    WHEN 1 THEN ts.cash_accum_diff
-    WHEN 2 THEN -ts.cash_accum_diff
-    END AS balance,
-    ROW_NUMBER() OVER (PARTITION BY ts.account_id ORDER BY ts.month DESC) AS rn
-    FROM transactions_summary AS ts
-    LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-    WHERE ts.month <= get_month(current_date)
-)
-SELECT ac.account_id, ac.account_type, ac.name, ts.balance
-FROM T AS ts
+SELECT ts.month, ts.account_id, ac.account_type, ac.name, SUM(ts.cash_accum_diff) AS balance
+FROM  transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-WHERE ts.rn = 1 AND
-(ac.account_type = 1 OR ac.account_type = 2)
-ORDER BY ac.account_type, ac.order_no, ts.account_id;
+WHERE ts.month <= get_month(current_date) AND
+      (ac.account_type = 1 OR ac.account_type = 2)
+GROUP BY ts.month, ts.account_id, ac.account_type, ac.name, ac.order_no
+ORDER BY ts.month, ac.account_type, ac.order_no, ts.account_id;
 
 
 /*
@@ -485,6 +475,37 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_transactions_month
 AFTER INSERT OR UPDATE OR DELETE ON transactions
     FOR EACH ROW EXECUTE PROCEDURE update_transactions_month();
+
+
+/*
+ * 現在月までtransactions_summaryに全科目のデータを追加する
+ */
+CREATE OR REPLACE FUNCTION add_current_transactions_summary() RETURNS void AS $$
+DECLARE
+    v_cur_month integer;
+    v_month integer;
+    rec RECORD;
+    v_row transactions_summary%ROWTYPE;
+BEGIN
+    v_cur_month := get_month(current_date);
+
+    FOR rec IN SELECT ac.account_id
+        FROM accounts AS ac
+        LEFT OUTER JOIN (SELECT account_id FROM transactions_summary WHERE month = v_cur_month) AS ts
+            ON ac.account_id = ts.account_id
+        WHERE ts.account_id IS NULL
+    LOOP
+        SELECT * INTO v_row FROM transactions_summary WHERE account_id = rec.account_id AND month < v_cur_month ORDER BY month DESC;
+
+        IF FOUND THEN  -- 過去の集計データがある場合、過去から現在までの集計データを追加
+            FOR v_month IN SELECT get_months(get_next_month(v_row.month), v_cur_month) LOOP
+                INSERT INTO transactions_summary
+                VALUES (rec.account_id, v_month, 0, 0, v_row.accrual_accum_diff, 0, 0, v_row.cash_accum_diff);
+            END LOOP;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
 
 
 /*

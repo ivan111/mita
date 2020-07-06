@@ -25,7 +25,7 @@ func (d *summary) String() string {
 	}
 	src.WriteString(fmt.Sprintf("%s%*s", d.name, nw, ""))
 
-	src.WriteString(fmt.Sprintf(" %10s", int2str(d.balance)))
+	src.WriteString(fmt.Sprintf(" %11s", int2str(d.balance)))
 
 	return src.String()
 }
@@ -37,11 +37,28 @@ func cmdBS(context *cli.Context) error {
 	}
 	defer db.Close()
 
-	return runBS(db)
+	return runBS(db, context.Args().First())
 }
 
-func runBS(db *sql.DB) error {
-	items, err := dbGetBalances(db)
+func runBS(db *sql.DB, monthStr string) error {
+	if monthStr == "" {
+		monthStr = "-0" // 今月
+	}
+
+	month, err := str2month(monthStr)
+	if err != nil {
+		return err
+	}
+
+	println(month2str(month))
+	println()
+
+	err = updateTransactionsSummary(db)
+	if err != nil {
+		return err
+	}
+
+	items, err := dbGetBalances(db, month)
 	if err != nil {
 		return err
 	}
@@ -76,9 +93,9 @@ func runBS(db *sql.DB) error {
 	}
 
 	println()
-	printf("総資産: %19s\n", int2str(assetSum))
-	printf("総負債: %19s\n", int2str(liabilitySum))
-	printf("純資産: %19s\n", int2str(assetSum-liabilitySum))
+	printf("総資産: %20s\n", int2str(assetSum))
+	printf("総負債: %20s\n", int2str(liabilitySum))
+	printf("純資産: %20s\n", int2str(assetSum+liabilitySum))
 
 	return nil
 }
@@ -163,13 +180,20 @@ func printSubItems(items []summary) {
 	}
 }
 
+func updateTransactionsSummary(db *sql.DB) error {
+	_, err := db.Exec("SELECT add_current_transactions_summary()")
+
+	return err
+}
+
 const sqlGetBalances = `
 SELECT account_id, account_type, name, balance
 FROM balance_view
+WHERE month = $1
 `
 
-func dbGetBalances(db *sql.DB) ([]summary, error) {
-	rows, err := db.Query(sqlGetBalances)
+func dbGetBalances(db *sql.DB, month int) ([]summary, error) {
+	rows, err := db.Query(sqlGetBalances, month)
 	if err != nil {
 		return nil, err
 	}
