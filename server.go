@@ -21,12 +21,45 @@ func cmdServer(context *cli.Context) error {
 
 	fs := http.FileServer(statikFS)
 	http.Handle("/", fs)
+	http.HandleFunc("/api/assets", apiAssetsHandler)
 	http.HandleFunc("/api/bp", apiBPHandler)
 	http.HandleFunc("/api/pl", apiPLHandler)
 
 	port := context.Int("port")
 	printf("Running on http://localhost:%d/ (Press CTRL+C to quit)\n", port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+}
+
+type apiAssets struct {
+	Month   int `json:"month"`
+	Balance int `json:"balance"`
+}
+
+func apiAssetsHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := connectDB()
+	if err != nil {
+		eprintln(err)
+		return
+	}
+	defer db.Close()
+
+	err = updateTransactionsSummary(db)
+	if err != nil {
+		eprintln(err)
+		return
+	}
+
+	data, err := dbGetAssets(db)
+	if err != nil {
+		eprintln(err)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		eprintln(err)
+	}
 }
 
 type apiBP struct {
@@ -107,6 +140,42 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		eprintln(err)
 	}
+}
+
+const sqlGetAssets = `
+SELECT month, SUM(balance)
+FROM balance_view group by month
+`
+
+func dbGetAssets(db *sql.DB) ([]apiAssets, error) {
+	var rows *sql.Rows
+	var err error
+
+	rows, err = db.Query(sqlGetAssets)
+
+	if err != nil {
+		return nil, err
+	}
+
+	isZeroStart := true
+
+	var arr []apiAssets
+
+	for rows.Next() {
+		var d apiAssets
+
+		if err := rows.Scan(&d.Month, &d.Balance); err != nil {
+			return nil, err
+		}
+
+		if isZeroStart == false || d.Balance != 0 {
+			isZeroStart = false
+			arr = append(arr, d)
+		}
+	}
+	rows.Close()
+
+	return arr, nil
 }
 
 func getAccountTypeKeys(db *sql.DB, acType int) ([]string, error) {

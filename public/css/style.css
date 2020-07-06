@@ -10,3 +10,33 @@ body {
     stroke: gray;
     stroke-width: 1;
 }
+
+.line {
+    fill: none;
+    stroke: darkslategray;
+    stroke-width: 2px;
+}
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+}
+
+.tooltip-g circle {
+    fill: darkslategray;
+}
+
+.tooltip-g line {
+    stroke: darkslategray;
+    stroke-width: 1px;
+    stroke-dasharray: 3, 3;
+}
+
+.tooltip-box {
+    fill: white;
+    stroke: #000;
+}
+
+.tooltip text {
+    font-size: 14px;
+}
