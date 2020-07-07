@@ -22,7 +22,7 @@ func cmdServer(context *cli.Context) error {
 	fs := http.FileServer(statikFS)
 	http.Handle("/", fs)
 	http.HandleFunc("/api/assets", apiAssetsHandler)
-	http.HandleFunc("/api/bp", apiBPHandler)
+	http.HandleFunc("/api/balances", apiBalancesHandler)
 	http.HandleFunc("/api/pl", apiPLHandler)
 
 	port := context.Int("port")
@@ -62,12 +62,12 @@ func apiAssetsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type apiBP struct {
+type apiBalances struct {
 	Month   int `json:"month"`
 	Balance int `json:"balance"`
 }
 
-func apiBPHandler(w http.ResponseWriter, r *http.Request) {
+func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
 	db, err := connectDB()
 	if err != nil {
 		eprintln(err)
@@ -75,7 +75,7 @@ func apiBPHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	data, err := dbGetBP(db)
+	data, err := dbGetAPIBalances(db)
 	if err != nil {
 		eprintln(err)
 		return
@@ -178,6 +178,58 @@ func dbGetAssets(db *sql.DB) ([]apiAssets, error) {
 	return arr, nil
 }
 
+const sqlGetAPIBalances = `
+SELECT month, balance
+FROM bp_view
+`
+
+func dbGetAPIBalances(db *sql.DB) ([]apiBalances, error) {
+	rows, err := db.Query(sqlGetAPIBalances)
+	if err != nil {
+		return nil, err
+	}
+
+	isZeroStart := true
+
+	var arr []apiBalances
+
+	thisMonth, _ := str2month("-0")
+	nextMonth := 0
+
+	for rows.Next() {
+		var d apiBalances
+
+		if err := rows.Scan(&d.Month, &d.Balance); err != nil {
+			return nil, err
+		}
+
+		if nextMonth == 0 {
+			nextMonth = d.Month
+		}
+
+		if nextMonth == d.Month {
+			nextMonth = incrementMonth(nextMonth)
+		} else {
+			d = apiBalances{
+				Month:   nextMonth,
+				Balance: 0,
+			}
+		}
+
+		if d.Month > thisMonth {
+			break
+		}
+
+		if isZeroStart == false || d.Balance != 0 {
+			isZeroStart = false
+			arr = append(arr, d)
+		}
+	}
+	rows.Close()
+
+	return arr, nil
+}
+
 func getAccountTypeKeys(db *sql.DB, acType int) ([]string, error) {
 	accounts, err := dbGetAccountsByType(db, acType)
 	if err != nil {
@@ -227,53 +279,6 @@ func getPLAmountMap(db *sql.DB, keys []string) ([]map[string]int, error) {
 	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
 		arr[i], arr[j] = arr[j], arr[i]
 	}
-
-	return arr, nil
-}
-
-const sqlGetBP = `
-SELECT month, balance
-FROM bp_view
-`
-
-func dbGetBP(db *sql.DB) ([]apiBP, error) {
-	rows, err := db.Query(sqlGetBP)
-	if err != nil {
-		return nil, err
-	}
-
-	var arr []apiBP
-
-	thisMonth, _ := str2month("-0")
-	nextMonth := 0
-
-	for rows.Next() {
-		var d apiBP
-
-		if err := rows.Scan(&d.Month, &d.Balance); err != nil {
-			return nil, err
-		}
-
-		if nextMonth == 0 {
-			nextMonth = d.Month
-		}
-
-		if nextMonth == d.Month {
-			nextMonth = incrementMonth(nextMonth)
-		} else {
-			d = apiBP{
-				Month:   nextMonth,
-				Balance: 0,
-			}
-		}
-
-		if d.Month > thisMonth {
-			break
-		}
-
-		arr = append(arr, d)
-	}
-	rows.Close()
 
 	return arr, nil
 }

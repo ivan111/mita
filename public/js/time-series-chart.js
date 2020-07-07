@@ -16,9 +16,10 @@ var timeSeriesChart = (function () {
             tooltipWidth = 100,
             tooltipHeight = 50,
             isFitWidth = false,
-            posColor = "steelblue",
-            negColor = "firebrick",
-            zeroColor = "plum",
+            pos1Color = "lightsteelblue",
+            pos2Color = "steelblue",
+            neg1Color = "lightpink",
+            neg2Color = "firebrick",
             prefix = "tsc",
             transform = d3.zoomIdentity,
             xValue = function(d) { return d[0]; },
@@ -241,19 +242,20 @@ var timeSeriesChart = (function () {
 
             if (yDomain[0] == 0) {
                 gradData = [
-                    {offset: "0%", color: zeroColor},
-                    {offset: "100%", color: posColor}
+                    {offset: "0%", color: pos1Color},
+                    {offset: "100%", color: pos2Color}
                 ];
             } else if (yDomain[1] == 0) {
                 gradData = [
-                    {offset: "0%", color: negColor},
-                    {offset: "100%", color: zeroColor}
+                    {offset: "0%", color: neg2Color},
+                    {offset: "100%", color: neg1Color}
                 ];
             } else {
                 gradData = [
-                    {offset: "0%", color: negColor},
-                    {offset: "50%", color: zeroColor},
-                    {offset: "100%", color: posColor}
+                    {offset: "0%", color: neg2Color},
+                    {offset: "50%", color: neg1Color},
+                    {offset: "49.999%", color: pos1Color},
+                    {offset: "100%", color: pos2Color}
                 ];
             }
 

@@ -23,12 +23,13 @@ const (
 )
 
 type account struct {
-	id          int
-	accountType int
-	name        string
-	searchWords string
-	orderNo     int
-	parent      struct {
+	id              int
+	accountType     int
+	name            string
+	searchWords     string
+	orderNo         int
+	isExtraordinary bool
+	parent          struct {
 		id   int
 		name string
 	}
@@ -461,12 +462,12 @@ func selectOrderTarget(parents []account) (int, error) {
 
 func confirmAccount(accounts []account, d *account, enableType bool) (bool, error) {
 	for {
-		printf("\n%s %s %s (%s)\n", acType2str(d.accountType), d.name, d.searchWords, d.parent.name)
+		printf("\n%s %s %s (%s) 特別損益: %t\n", acType2str(d.accountType), d.name, d.searchWords, d.parent.name, d.isExtraordinary)
 
 		if enableType {
-			print("y(es), t(ype), n(ame), s(earch words), p(arent), q(uit): ")
+			print("y(es), t(ype), n(ame), s(earch words), p(arent), e(xtraordinary), q(uit): ")
 		} else {
-			print("y(es), n(ame), s(earch words), p(arent), q(uit): ")
+			print("y(es), n(ame), s(earch words), p(arent), e(xtraordinary), q(uit): ")
 		}
 		s, err := input()
 		if err != nil {
@@ -501,12 +502,14 @@ func confirmAccount(accounts []account, d *account, enableType bool) (bool, erro
 			}
 		case "s", "search words":
 			d.searchWords = scanSearchWords()
+		case "e", "extraordinary":
+			d.isExtraordinary = confirmYesNo("特別損益？")
 		}
 	}
 }
 
 const sqlGetAccounts = `
-SELECT ac.account_id, ac.account_type, ac.name, ac.search_words, p.account_id, p.name
+SELECT ac.account_id, ac.account_type, ac.name, ac.search_words, p.account_id, p.name, ac.is_extraordinary
 FROM accounts ac
 LEFT JOIN accounts AS p ON ac.parent = p.account_id
 ORDER BY ac.account_type, p.order_no, ac.order_no, ac.account_id
@@ -523,7 +526,7 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 	for rows.Next() {
 		var ac account
 
-		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords, &ac.parent.id, &ac.parent.name); err != nil {
+		if err := rows.Scan(&ac.id, &ac.accountType, &ac.name, &ac.searchWords, &ac.parent.id, &ac.parent.name, &ac.isExtraordinary); err != nil {
 			return nil, err
 		}
 
@@ -626,14 +629,14 @@ func dbGetAccountChildren(db *sql.DB, parentID int) ([]account, error) {
 }
 
 const sqlAddAccount = `
-INSERT INTO accounts(account_type, name, search_words, parent)
-VALUES($1, $2, $3, $4)
+INSERT INTO accounts(account_type, name, search_words, parent, is_extraordinary)
+VALUES($1, $2, $3, $4, $5)
 RETURNING account_id
 `
 
 func dbAddAccount(db dbtx, d *account) (int, error) {
 	var idStr string
-	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords, d.parent.id).Scan(&idStr)
+	err := db.QueryRow(sqlAddAccount, d.accountType, d.name, d.searchWords, d.parent.id, d.isExtraordinary).Scan(&idStr)
 	if err != nil {
 		return 0, err
 	}
@@ -650,12 +653,13 @@ const sqlEditAccount = `
 UPDATE accounts SET
 name = $2,
 search_words = $3,
-parent = $4
+parent = $4,
+is_extraordinary = $5
 WHERE account_id = $1
 `
 
 func dbEditAccount(db *sql.DB, d *account) error {
-	_, err := db.Exec(sqlEditAccount, d.id, d.name, d.searchWords, d.parent.id)
+	_, err := db.Exec(sqlEditAccount, d.id, d.name, d.searchWords, d.parent.id, d.isExtraordinary)
 
 	return err
 }

@@ -8,6 +8,7 @@ CREATE TABLE accounts (
     search_words varchar(32) NOT NULL DEFAULT '',
     parent integer NOT NULL REFERENCES accounts (account_id),
     order_no integer NOT NULL DEFAULT 999,
+    is_extraordinary boolean NOT NULL DEFAULT FALSE,
 
     PRIMARY KEY (account_id)
 );
@@ -165,6 +166,7 @@ SELECT ts.month,
        AS balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
+WHERE ac.is_extraordinary = FALSE
 GROUP BY ts.month
 ORDER BY ts.month;
 
