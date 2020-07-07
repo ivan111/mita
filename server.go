@@ -68,6 +68,14 @@ type apiBalances struct {
 }
 
 func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
+	var isCash bool
+
+	keys, ok := r.URL.Query()["cash"]
+
+	if ok && keys[0] == "true" {
+		isCash = true
+	}
+
 	db, err := connectDB()
 	if err != nil {
 		eprintln(err)
@@ -75,7 +83,7 @@ func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	data, err := dbGetAPIBalances(db)
+	data, err := dbGetAPIBalances(db, isCash)
 	if err != nil {
 		eprintln(err)
 		return
@@ -178,13 +186,25 @@ func dbGetAssets(db *sql.DB) ([]apiAssets, error) {
 	return arr, nil
 }
 
-const sqlGetAPIBalances = `
-SELECT month, balance
+const sqlGetAccrualBalances = `
+SELECT month, accrual_balance
 FROM bp_view
 `
 
-func dbGetAPIBalances(db *sql.DB) ([]apiBalances, error) {
-	rows, err := db.Query(sqlGetAPIBalances)
+const sqlGetCashBalances = `
+SELECT month, cash_balance
+FROM bp_view
+`
+
+func dbGetAPIBalances(db *sql.DB, isCash bool) ([]apiBalances, error) {
+	var rows *sql.Rows
+	var err error
+
+	if isCash {
+		rows, err = db.Query(sqlGetCashBalances)
+	} else {
+		rows, err = db.Query(sqlGetAccrualBalances)
+	}
 	if err != nil {
 		return nil, err
 	}

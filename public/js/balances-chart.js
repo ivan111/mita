@@ -16,3 +16,25 @@ d3.json('/api/balances').then(function(data) {
         .datum(data)
         .call(balancesChart);
 });
+
+var isCurCash = false;
+
+function changeMode(isCash) {
+    if (isCash != isCurCash) {
+        isCurCash = isCash;
+
+        if (isCash) {
+            d3.json("/api/balances?cash=true").then(function(data) {
+                d3.select("#balances-chart")
+                    .datum(data)
+                    .call(balancesChart);
+            });
+        } else {
+            d3.json("/api/balances").then(function(data) {
+                d3.select("#balances-chart")
+                    .datum(data)
+                    .call(balancesChart);
+            });
+        }
+    }
+}

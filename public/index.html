@@ -13,6 +13,18 @@
 
 <body>
 
+<div>
+    <form id="cash-form">
+        <fieldset style="float: left;">
+            <legend>計上法</legend>
+            <input type="radio" id="accrual-balances-button" name="mode" onchange="changeMode(false)" checked>
+            <label for="accrual-balances-button">発生主義</label>
+            <input type="radio" id="cash-balances-button" name="mode" onchange="changeMode(true)">
+            <label for="cash-balances-button">現金主義</label>
+        </fieldset>
+    </form>
+</div>
+
 <div id="balances-chart"></div>
 
 <svg class="stack"></svg>
