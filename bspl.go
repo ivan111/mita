@@ -9,10 +9,11 @@ import (
 )
 
 type summary struct {
-	id          int
-	accountType int
-	name        string
-	balance     int
+	id              int
+	accountType     int
+	name            string
+	isExtraordinary bool
+	balance         int
 }
 
 func (d *summary) String() string {
@@ -167,9 +168,9 @@ func runPL(db *sql.DB, isCash bool, monthStr string) error {
 	}
 
 	println()
-	printf("総収入: %19s\n", int2str(incomeSum))
-	printf("総費用: %19s\n", int2str(expenseSum))
-	printf("損益  : %19s\n", int2str(incomeSum-expenseSum))
+	printf("総収入: %20s\n", int2str(incomeSum))
+	printf("総費用: %20s\n", int2str(expenseSum))
+	printf("損益  : %20s\n", int2str(incomeSum+expenseSum))
 
 	return nil
 }
@@ -215,13 +216,13 @@ func dbGetBalances(db *sql.DB, month int) ([]summary, error) {
 }
 
 const sqlGetGroupedPLAccrual = `
-SELECT account_id, account_type, name, accrual_balance
+SELECT account_id, account_type, name, is_extraordinary, accrual_balance
 FROM grouped_pl_view
 WHERE month = $1
 `
 
 const sqlGetGroupedPLCash = `
-SELECT account_id, account_type, name, cash_balance
+SELECT account_id, account_type, name, is_extraordinary, cash_balance
 FROM grouped_pl_view
 WHERE month = $1
 `
@@ -244,7 +245,7 @@ func dbGetGroupedPL(db *sql.DB, isCash bool, month int) ([]summary, error) {
 	for rows.Next() {
 		var d summary
 
-		if err := rows.Scan(&d.id, &d.accountType, &d.name, &d.balance); err != nil {
+		if err := rows.Scan(&d.id, &d.accountType, &d.name, &d.isExtraordinary, &d.balance); err != nil {
 			return nil, err
 		}
 
@@ -256,13 +257,13 @@ func dbGetGroupedPL(db *sql.DB, isCash bool, month int) ([]summary, error) {
 }
 
 const sqlGetPLAccrual = `
-SELECT account_id, account_type, name, parent, accrual_balance
+SELECT account_id, account_type, name, parent, is_extraordinary, accrual_balance
 FROM pl_view
 WHERE month = $1
 `
 
 const sqlGetPLCash = `
-SELECT account_id, account_type, name, parent, cash_balance
+SELECT account_id, account_type, name, parent, is_extraordinary, cash_balance
 FROM pl_view
 WHERE month = $1
 `
@@ -286,7 +287,7 @@ func dbGetPL(db *sql.DB, isCash bool, month int) (map[int][]summary, error) {
 		var d summary
 		var p int
 
-		if err := rows.Scan(&d.id, &d.accountType, &d.name, &p, &d.balance); err != nil {
+		if err := rows.Scan(&d.id, &d.accountType, &d.name, &p, &d.isExtraordinary, &d.balance); err != nil {
 			return nil, err
 		}
 

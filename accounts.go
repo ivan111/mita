@@ -538,7 +538,7 @@ func dbGetAccounts(db *sql.DB) ([]account, error) {
 }
 
 const sqlGetAccountsByType = `
-SELECT account_id, name, order_no
+SELECT account_id, name, order_no, is_extraordinary
 FROM accounts
 WHERE account_type = $1 AND
       account_id = parent
@@ -556,7 +556,7 @@ func dbGetAccountsByType(db *sql.DB, t int) ([]account, error) {
 	for rows.Next() {
 		var ac account
 
-		if err := rows.Scan(&ac.id, &ac.name, &ac.orderNo); err != nil {
+		if err := rows.Scan(&ac.id, &ac.name, &ac.orderNo, &ac.isExtraordinary); err != nil {
 			return nil, err
 		}
 

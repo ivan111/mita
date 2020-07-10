@@ -17,6 +17,14 @@ d3.json('/api/balances').then(function(data) {
         .call(balancesChart);
 });
 
+var myPLChart = plChart();
+
+d3.json("/api/pl").then(function(data) {
+    d3.select("#pl-chart")
+        .datum(data)
+        .call(myPLChart);
+});
+
 var isCurCash = false;
 
 function changeMode(isCash) {
@@ -29,11 +37,23 @@ function changeMode(isCash) {
                     .datum(data)
                     .call(balancesChart);
             });
+
+            d3.json("/api/pl?cash=true").then(function(data) {
+                d3.select("#pl-chart")
+                    .datum(data)
+                    .call(myPLChart);
+            });
         } else {
             d3.json("/api/balances").then(function(data) {
                 d3.select("#balances-chart")
                     .datum(data)
                     .call(balancesChart);
+            });
+
+            d3.json("/api/pl").then(function(data) {
+                d3.select("#pl-chart")
+                    .datum(data)
+                    .call(myPLChart);
             });
         }
     }

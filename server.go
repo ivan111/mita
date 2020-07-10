@@ -70,9 +70,9 @@ type apiBalances struct {
 func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
 	var isCash bool
 
-	keys, ok := r.URL.Query()["cash"]
+	gkeys, ok := r.URL.Query()["cash"]
 
-	if ok && keys[0] == "true" {
+	if ok && gkeys[0] == "true" {
 		isCash = true
 	}
 
@@ -97,14 +97,20 @@ func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type apiPL struct {
-	ExpenseKeys []string         `json:"expense_keys"`
-	IncomeKeys  []string         `json:"income_keys"`
-	Expense     []map[string]int `json:"expense"`
-	Income      []map[string]int `json:"income"`
+	Keys   []string         `json:"keys"`
+	Values []map[string]int `json:"values"`
 }
 
 // 今月より前の12カ月分のデータを返す
 func apiPLHandler(w http.ResponseWriter, r *http.Request) {
+	var isCash bool
+
+	gkeys, ok := r.URL.Query()["cash"]
+
+	if ok && gkeys[0] == "true" {
+		isCash = true
+	}
+
 	db, err := connectDB()
 	if err != nil {
 		eprintln(err)
@@ -124,23 +130,17 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	income, err := getPLAmountMap(db, incomeKeys)
-	if err != nil {
-		eprintln(err)
-		return
-	}
+	keys := append(incomeKeys, expenseKeys...)
 
-	expense, err := getPLAmountMap(db, expenseKeys)
+	values, err := getPLAmountMap(db, isCash, keys)
 	if err != nil {
 		eprintln(err)
 		return
 	}
 
 	data := apiPL{
-		IncomeKeys:  incomeKeys,
-		Income:      income,
-		ExpenseKeys: expenseKeys,
-		Expense:     expense,
+		Keys:   keys,
+		Values: values,
 	}
 
 	w.Header().Set("Content-type", "application/json")
@@ -259,13 +259,15 @@ func getAccountTypeKeys(db *sql.DB, acType int) ([]string, error) {
 	var keys []string
 
 	for _, d := range accounts {
-		keys = append(keys, d.name)
+		if d.isExtraordinary == false {
+			keys = append(keys, d.name)
+		}
 	}
 
 	return keys, nil
 }
 
-func getPLAmountMap(db *sql.DB, keys []string) ([]map[string]int, error) {
+func getPLAmountMap(db *sql.DB, isCash bool, keys []string) ([]map[string]int, error) {
 	var arr []map[string]int
 
 	month, _ := str2month("-11")
@@ -273,13 +275,15 @@ func getPLAmountMap(db *sql.DB, keys []string) ([]map[string]int, error) {
 	for i := 0; i < 12; i++ {
 		item2amount := make(map[string]int)
 
-		items, err := dbGetGroupedPL(db, false, month)
+		items, err := dbGetGroupedPL(db, isCash, month)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, item := range items {
-			item2amount[item.name] = item.balance
+			if item.isExtraordinary == false {
+				item2amount[item.name] = item.balance
+			}
 		}
 
 		m := make(map[string]int)
@@ -287,7 +291,9 @@ func getPLAmountMap(db *sql.DB, keys []string) ([]map[string]int, error) {
 		m["month"] = month
 
 		for _, name := range keys {
-			m[name] = item2amount[name]
+			if item2amount[name] != 0 {
+				m[name] = item2amount[name]
+			}
 		}
 
 		arr = append(arr, m)

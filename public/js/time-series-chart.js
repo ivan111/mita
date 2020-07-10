@@ -290,12 +290,12 @@ var timeSeriesChart = (function () {
         };
 
         function getWidth() {
-            if (!isFitWidth) {
+            if (!isFitWidth || typeof div === "undefined") {
                 return width;
             }
 
             return Math.max(width, parseInt(div.style("width"), 10));
-        };
+        }
 
         function X(d) {
             return xScale(d[0]);
