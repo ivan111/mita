@@ -23,7 +23,7 @@ func TestRunBS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = runBS(db)
+	err = runBS(db, "2020-01")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,6 +75,6 @@ func subTestRunPL(db *sql.DB, t *testing.T, isCash bool, month string) {
 	}
 
 	if string(b) != buf.String() {
-		t.Fatal("string(bytes) != buf.String()")
+		t.Fatalf("string(bytes) != buf.String()\n%s\n%s", string(b), buf.String())
 	}
 }
