@@ -6,6 +6,7 @@ var plChart = (function () {
         var div,
             svg,
             g,
+            tooltip,
             data,
             margin = {top: 50, right: 10, bottom: 10, left: 80},
             width = 720,  // isFitWidthがtrueのときは最小幅の意味になる
@@ -14,6 +15,8 @@ var plChart = (function () {
             numMonths = 12,
             height = 800,
             maxX,
+            tooltipWidth = 100,
+            tooltipHeight = 50,
             expenseStacked,
             incomeStacked,
             xValue = function(d) { return d[0]; },
@@ -82,6 +85,8 @@ var plChart = (function () {
 
                     enterLayer(incomeStacked, "incomeLayers", color, 0);
                     enterLayer(expenseStacked, "expenseLayers", color, barHeight);
+
+                    setupTooltip();
                 }
 
                 g.select(".y.axis").call(yAxis);
@@ -156,12 +161,30 @@ var plChart = (function () {
                 .attr("class", className)
                 .attr("fill", function(d) { return color(d.key); });
 
+            function mousemove(d) {
+                var rect = d3.select(this),
+                    x = +rect.attr("x") + ((+rect.attr("width") - tooltipWidth) / 2),
+                    y = yScale(d.data.month) + extraY + barHeight + 10;
+
+                if (y + tooltipHeight > height - margin.top - margin.bottom) {
+                    y -= barHeight + tooltipHeight + 20;
+                }
+
+                tooltip.select(".tooltip-name").text(d.key);
+                tooltip.select(".tooltip-value").text(d.data[d.key].toLocaleString());
+
+                tooltip.attr("transform", "translate(" + x.toFixed(2) + "," + y.toFixed(2) + ")");
+            }
+
             layers.selectAll("rect")
                 .data(function(d) { return d; })
                 .enter()
                 .append("rect")
                 .attr("y", function(d) { return yScale(d.data.month) + extraY; })
-                .attr("height", barHeight);
+                .attr("height", barHeight)
+                .on("touchstart mouseenter", function() { tooltip.style("display", null); })
+                .on("touchend mouseleave", function() { tooltip.style("display", "none"); })
+                .on("touchmove mousemove", mousemove);
 
             layers.selectAll("text")
                 .data(function(d) { return d; })
@@ -171,7 +194,10 @@ var plChart = (function () {
                 .attr("fill", function(d) { return "black"; })
                 .style("font-size", "12px")
                 .style("text-anchor", "middle")
-                .text(function(d) { return d.key; });
+                .text(function(d) { return d.key; })
+                .on("touchstart mouseenter", function() { tooltip.style("display", null); })
+                .on("touchend mouseleave", function() { tooltip.style("display", "none"); })
+                .on("touchmove mousemove", mousemove);
         }
 
         function updateLayer(stacked, className) {
@@ -203,6 +229,29 @@ var plChart = (function () {
                         this.textContent = "";
                     }
                 });
+        }
+
+        function setupTooltip() {
+            tooltip = g.append("g")
+                .attr("class", "tooltip")
+                .style("display", "none");
+
+            tooltip.append("rect")
+                .attr("class", "tooltip-box")
+                .attr("width", tooltipWidth)
+                .attr("height", tooltipHeight)
+                .attr("rx", 4)
+                .attr("ry", 4);
+
+            tooltip.append("text")
+                .attr("class", "tooltip-name")
+                .attr("x", 8)
+                .attr("y", 20);
+
+            tooltip.append("text")
+                .attr("class", "tooltip-value")
+                .attr("x", 8)
+                .attr("y", 40);
         }
 
         return chart;

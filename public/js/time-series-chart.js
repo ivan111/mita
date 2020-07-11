@@ -91,8 +91,6 @@ var timeSeriesChart = (function () {
                     drawArea.append("path").attr("class", "line");
                     g.append("g").attr("class", "y axis");
                     g.append("g").attr("class", "x axis");
-                    g.append("g").attr("class", "tooltip-g");
-                    g.append("rect").attr("class", "overlay");
 
                     setupTooltip();
                 }
@@ -160,6 +158,9 @@ var timeSeriesChart = (function () {
         };
 
         function setupTooltip() {
+            g.append("g").attr("class", "tooltip-g");
+            g.append("rect").attr("class", "overlay");
+
             var tooltipG = g.select(".tooltip-g")
                 .style("display", "none");
 
