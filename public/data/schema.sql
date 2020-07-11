@@ -163,14 +163,22 @@ SELECT ts.month,
        SUM(CASE WHEN ac.account_type = 3 THEN accrual_credit_amount - accrual_debit_amount ELSE 0 END)
        -
        SUM(CASE WHEN ac.account_type = 4 THEN accrual_debit_amount - accrual_credit_amount ELSE 0 END)
-       AS accrual_balance,
+       AS extra_accrual_balance,
        SUM(CASE WHEN ac.account_type = 3 THEN cash_credit_amount - cash_debit_amount ELSE 0 END)
        -
        SUM(CASE WHEN ac.account_type = 4 THEN cash_debit_amount - cash_credit_amount ELSE 0 END)
+       AS extra_cash_balance,
+       SUM(CASE WHEN ac.account_type = 3 AND ac.is_extraordinary = FALSE THEN accrual_credit_amount - accrual_debit_amount ELSE 0 END)
+       -
+       SUM(CASE WHEN ac.account_type = 4 AND ac.is_extraordinary = FALSE THEN accrual_debit_amount - accrual_credit_amount ELSE 0 END)
+       AS accrual_balance,
+       SUM(CASE WHEN ac.account_type = 3 AND ac.is_extraordinary = FALSE THEN cash_credit_amount - cash_debit_amount ELSE 0 END)
+       -
+       SUM(CASE WHEN ac.account_type = 4 AND ac.is_extraordinary = FALSE THEN cash_debit_amount - cash_credit_amount ELSE 0 END)
        AS cash_balance
 FROM transactions_summary AS ts
 LEFT JOIN accounts AS ac ON ts.account_id = ac.account_id
-WHERE ts.month <= get_month(current_date) AND ac.is_extraordinary = FALSE
+WHERE ts.month <= get_month(current_date)
 GROUP BY ts.month
 ORDER BY ts.month;
 

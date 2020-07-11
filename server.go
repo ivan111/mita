@@ -62,20 +62,22 @@ func apiAssetsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getBoolParam(r *http.Request, name string) bool {
+	keys, ok := r.URL.Query()[name]
+
+	if ok && keys[0] == "true" {
+		return true
+	}
+
+	return false
+}
+
 type apiBalances struct {
 	Month   int `json:"month"`
 	Balance int `json:"balance"`
 }
 
 func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
-	var isCash bool
-
-	gkeys, ok := r.URL.Query()["cash"]
-
-	if ok && gkeys[0] == "true" {
-		isCash = true
-	}
-
 	db, err := connectDB()
 	if err != nil {
 		eprintln(err)
@@ -83,7 +85,7 @@ func apiBalancesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	data, err := dbGetAPIBalances(db, isCash)
+	data, err := dbGetAPIBalances(db, getBoolParam(r, "cash"), getBoolParam(r, "extraordinary"))
 	if err != nil {
 		eprintln(err)
 		return
@@ -103,14 +105,6 @@ type apiPL struct {
 
 // 今月より前の12カ月分のデータを返す
 func apiPLHandler(w http.ResponseWriter, r *http.Request) {
-	var isCash bool
-
-	gkeys, ok := r.URL.Query()["cash"]
-
-	if ok && gkeys[0] == "true" {
-		isCash = true
-	}
-
 	db, err := connectDB()
 	if err != nil {
 		eprintln(err)
@@ -132,7 +126,7 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 
 	keys := append(incomeKeys, expenseKeys...)
 
-	values, err := getPLAmountMap(db, isCash, keys)
+	values, err := getPLAmountMap(db, getBoolParam(r, "cash"), getBoolParam(r, "extraordinary"), keys)
 	if err != nil {
 		eprintln(err)
 		return
@@ -186,25 +180,26 @@ func dbGetAssets(db *sql.DB) ([]apiAssets, error) {
 	return arr, nil
 }
 
-const sqlGetAccrualBalances = `
-SELECT month, accrual_balance
-FROM bp_view
-`
-
-const sqlGetCashBalances = `
-SELECT month, cash_balance
-FROM bp_view
-`
-
-func dbGetAPIBalances(db *sql.DB, isCash bool) ([]apiBalances, error) {
+func dbGetAPIBalances(db *sql.DB, isCash bool, showExtraordinary bool) ([]apiBalances, error) {
 	var rows *sql.Rows
 	var err error
+	var rowName string
 
 	if isCash {
-		rows, err = db.Query(sqlGetCashBalances)
+		if showExtraordinary {
+			rowName = "extra_cash_balance"
+		} else {
+			rowName = "cash_balance"
+		}
 	} else {
-		rows, err = db.Query(sqlGetAccrualBalances)
+		if showExtraordinary {
+			rowName = "extra_accrual_balance"
+		} else {
+			rowName = "accrual_balance"
+		}
 	}
+
+	rows, err = db.Query("SELECT month, " + rowName + " FROM bp_view")
 	if err != nil {
 		return nil, err
 	}
@@ -259,15 +254,13 @@ func getAccountTypeKeys(db *sql.DB, acType int) ([]string, error) {
 	var keys []string
 
 	for _, d := range accounts {
-		if d.isExtraordinary == false {
-			keys = append(keys, d.name)
-		}
+		keys = append(keys, d.name)
 	}
 
 	return keys, nil
 }
 
-func getPLAmountMap(db *sql.DB, isCash bool, keys []string) ([]map[string]int, error) {
+func getPLAmountMap(db *sql.DB, isCash bool, showExtraordinary bool, keys []string) ([]map[string]int, error) {
 	var arr []map[string]int
 
 	month, _ := str2month("-11")
@@ -281,7 +274,7 @@ func getPLAmountMap(db *sql.DB, isCash bool, keys []string) ([]map[string]int, e
 		}
 
 		for _, item := range items {
-			if item.isExtraordinary == false {
+			if showExtraordinary || item.isExtraordinary == false {
 				item2amount[item.name] = item.balance
 			}
 		}

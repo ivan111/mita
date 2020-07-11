@@ -26,35 +26,47 @@ d3.json("/api/pl").then(function(data) {
 });
 
 var isCurCash = false;
+var curShowExtra = false;
 
-function changeMode(isCash) {
-    if (isCash != isCurCash) {
+function changeMode(isCash, showExtra) {
+    if (isCash == null) {
+        isCash = isCurCash;
+    }
+
+    if (showExtra == null) {
+        showExtra = curShowExtra;
+    }
+
+    if (isCash != isCurCash || showExtra != curShowExtra) {
         isCurCash = isCash;
+        curShowExtra = showExtra;
+
+        var params = "";
 
         if (isCash) {
-            d3.json("/api/balances?cash=true").then(function(data) {
-                d3.select("#balances-chart")
-                    .datum(data)
-                    .call(balancesChart);
-            });
-
-            d3.json("/api/pl?cash=true").then(function(data) {
-                d3.select("#pl-chart")
-                    .datum(data)
-                    .call(myPLChart);
-            });
-        } else {
-            d3.json("/api/balances").then(function(data) {
-                d3.select("#balances-chart")
-                    .datum(data)
-                    .call(balancesChart);
-            });
-
-            d3.json("/api/pl").then(function(data) {
-                d3.select("#pl-chart")
-                    .datum(data)
-                    .call(myPLChart);
-            });
+            params = "?cash=true";
         }
+
+        if (showExtra) {
+            if (params == "") {
+                params = "?";
+            } else {
+                params += "&";
+            }
+
+            params += "extraordinary=true";
+        }
+
+        d3.json("/api/balances" + params).then(function(data) {
+            d3.select("#balances-chart")
+                .datum(data)
+                .call(balancesChart);
+        });
+
+        d3.json("/api/pl" + params).then(function(data) {
+            d3.select("#pl-chart")
+                .datum(data)
+                .call(myPLChart);
+        });
     }
 }

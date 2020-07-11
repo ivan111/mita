@@ -17,10 +17,17 @@
     <form id="cash-form">
         <fieldset style="float: left;">
             <legend>計上法</legend>
-            <input type="radio" id="accrual-balances-button" name="mode" onchange="changeMode(false)" checked>
+            <input type="radio" id="accrual-balances-button" name="mode" onchange="changeMode(false, null)" checked>
             <label for="accrual-balances-button">発生主義</label>
-            <input type="radio" id="cash-balances-button" name="mode" onchange="changeMode(true)">
+            <input type="radio" id="cash-balances-button" name="mode" onchange="changeMode(true, null)">
             <label for="cash-balances-button">現金主義</label>
+        </fieldset>
+        <fieldset style="float: left;">
+            <legend>特別損益</legend>
+            <input type="radio" id="hide-extra-button" name="show-extra" onchange="changeMode(null, false)" checked>
+            <label for="hide-extra-button">非表示</label>
+            <input type="radio" id="show-extra-button" name="show-extra" onchange="changeMode(null, true)">
+            <label for="show-extra-button">表示</label>
         </fieldset>
     </form>
 </div>
