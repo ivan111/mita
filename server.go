@@ -5,12 +5,14 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	_ "github.com/ivan111/mita/statik"
 	_ "github.com/lib/pq"
 	"github.com/rakyll/statik/fs"
 	"github.com/urfave/cli/v2"
 	"net/http"
+	"strconv"
 )
 
 func cmdServer(context *cli.Context) error {
@@ -24,6 +26,7 @@ func cmdServer(context *cli.Context) error {
 	http.HandleFunc("/api/assets", apiAssetsHandler)
 	http.HandleFunc("/api/balances", apiBalancesHandler)
 	http.HandleFunc("/api/pl", apiPLHandler)
+	http.HandleFunc("/api/pl-years", apiPLYearsHandler)
 
 	port := context.Int("port")
 	printf("Running on http://localhost:%d/ (Press CTRL+C to quit)\n", port)
@@ -60,6 +63,21 @@ func apiAssetsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		eprintln(err)
 	}
+}
+
+func getIntParam(r *http.Request, name string) (int, error) {
+	keys, ok := r.URL.Query()[name]
+
+	if ok {
+		i, err := strconv.Atoi(keys[0])
+		if err != nil {
+			return 0, err
+		}
+
+		return i, nil
+	}
+
+	return 0, errors.New("No key")
 }
 
 func getBoolParam(r *http.Request, name string) bool {
@@ -126,7 +144,9 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 
 	keys := append(incomeKeys, expenseKeys...)
 
-	values, err := getPLAmountMap(db, getBoolParam(r, "cash"), getBoolParam(r, "extraordinary"), keys)
+	year, _ := getIntParam(r, "year")
+
+	values, err := getPLAmountMap(db, year, getBoolParam(r, "cash"), getBoolParam(r, "extraordinary"), keys)
 	if err != nil {
 		eprintln(err)
 		return
@@ -135,6 +155,35 @@ func apiPLHandler(w http.ResponseWriter, r *http.Request) {
 	data := apiPL{
 		Keys:   keys,
 		Values: values,
+	}
+
+	w.Header().Set("Content-type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		eprintln(err)
+	}
+}
+
+type apiPLYears struct {
+	Years []int `json:"years"`
+}
+
+func apiPLYearsHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := connectDB()
+	if err != nil {
+		eprintln(err)
+		return
+	}
+	defer db.Close()
+
+	years, err := dbGetPLYears(db)
+	if err != nil {
+		eprintln(err)
+		return
+	}
+
+	data := apiPLYears{
+		Years: years,
 	}
 
 	w.Header().Set("Content-type", "application/json")
@@ -260,10 +309,16 @@ func getAccountTypeKeys(db *sql.DB, acType int) ([]string, error) {
 	return keys, nil
 }
 
-func getPLAmountMap(db *sql.DB, isCash bool, showExtraordinary bool, keys []string) ([]map[string]int, error) {
+func getPLAmountMap(db *sql.DB, year int, isCash bool, showExtraordinary bool, keys []string) ([]map[string]int, error) {
 	var arr []map[string]int
 
-	month, _ := str2month("-11")
+	var month int
+
+	if year == 0 {
+		month, _ = str2month("-11")
+	} else {
+		month = year*100 + 01
+	}
 
 	for i := 0; i < 12; i++ {
 		item2amount := make(map[string]int)
@@ -314,4 +369,32 @@ func incrementMonth(ym int) int {
 	}
 
 	return year*100 + month
+}
+
+const sqlGetPLYears = `
+SELECT year
+FROM enum_pl_years_view
+`
+
+func dbGetPLYears(db *sql.DB) ([]int, error) {
+	var years []int
+
+	rows, err := db.Query(sqlGetPLYears)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var year int
+
+		if err := rows.Scan(&year); err != nil {
+			return nil, err
+		}
+
+		years = append(years, year)
+	}
+	rows.Close()
+
+	return years, nil
 }

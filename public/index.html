@@ -34,9 +34,35 @@
 
 <div id="balances-chart"></div>
 
+<div>
+Years: 
+<select id="pl-years" onchange="changeMode(null, null)">
+</select>
+</div>
+
 <div id="pl-chart"></div>
 
 <div id="assets-chart"></div>
+
+<script>
+d3.json('/api/pl-years').then(function(data) {
+    data.years.unshift([0]);
+
+    d3.select("#pl-years")
+        .selectAll("option")
+        .data(data.years)
+        .enter()
+        .append("option")
+        .text(function(d, i) {
+            if (i == 0) {
+                return "latest";
+            }
+
+            return d;
+        })
+        .attr("value", function(d) { return d; });
+});
+</script>
 
 </body>
 

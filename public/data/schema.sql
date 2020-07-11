@@ -218,6 +218,17 @@ GROUP BY pl.month, ac.account_id, ac.account_type, ac.name, ac.is_extraordinary
 HAVING SUM(pl.accrual_balance) <> 0 OR SUM(pl.cash_balance) <> 0
 ORDER BY ac.account_type, ac.order_no, ac.account_id;
 
+/**
+ * P/Lの年を列挙
+ */
+CREATE OR REPLACE VIEW enum_pl_years_view AS
+SELECT pl.month / 100 AS year
+FROM pl_view AS pl
+WHERE pl.month <= get_month(current_date)
+GROUP BY pl.month / 100
+HAVING SUM(pl.accrual_balance) <> 0 OR SUM(pl.cash_balance) <> 0
+ORDER BY pl.month / 100 DESC;
+
 
 /*
  * 日付から月を表す数値を取得

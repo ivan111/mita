@@ -25,10 +25,13 @@ d3.json("/api/pl").then(function(data) {
         .call(myPLChart);
 });
 
-var isCurCash = false;
-var curShowExtra = false;
+var curYear = 0,
+    isCurCash = false,
+    curShowExtra = false;
 
 function changeMode(isCash, showExtra) {
+    var year = d3.select("#pl-years").property('value');
+
     if (isCash == null) {
         isCash = isCurCash;
     }
@@ -37,24 +40,19 @@ function changeMode(isCash, showExtra) {
         showExtra = curShowExtra;
     }
 
-    if (isCash != isCurCash || showExtra != curShowExtra) {
+    if (year != curYear || isCash != isCurCash || showExtra != curShowExtra) {
+        curYear = year;
         isCurCash = isCash;
         curShowExtra = showExtra;
 
-        var params = "";
+        var params = "?year=" + year;
 
         if (isCash) {
-            params = "?cash=true";
+            params += "&cash=true";
         }
 
         if (showExtra) {
-            if (params == "") {
-                params = "?";
-            } else {
-                params += "&";
-            }
-
-            params += "extraordinary=true";
+            params += "&extraordinary=true";
         }
 
         d3.json("/api/balances" + params).then(function(data) {
