@@ -154,6 +154,37 @@ CREATE TABLE templates_detail (
     PRIMARY KEY (template_id, no)
 );
 
+/*
+ * グループテーブル
+ *
+ * check_account_id を設定すると、その勘定科目の貸借バランスを確認できる。
+ * クレジットカードでの支払いと引き落としの対応関係や
+ * 給与の明細と支払いの対応関係等に使用
+ */
+CREATE TABLE groups (
+    group_id SERIAL,
+    name varchar(16) NOT NULL,
+    check_account_id integer,
+
+    PRIMARY KEY (group_id)
+);
+
+CREATE TABLE groups_detail (
+    group_id integer NOT NULL REFERENCES groups (group_id) ON DELETE CASCADE,
+    transaction_id integer NOT NULL,
+
+    PRIMARY KEY (group_id, transaction_id)
+);
+
+
+/*
+ * 日付から月を表す数値を取得
+ * (例) '2019-03-03' を引数に与えると 201903 という数値に変換する
+ */
+CREATE OR REPLACE FUNCTION get_month(a_date date) RETURNS integer IMMUTABLE AS $$
+    SELECT CAST ((EXTRACT(YEAR FROM a_date) * 100 + EXTRACT(MONTH FROM a_date)) AS integer);
+$$ LANGUAGE SQL;
+
 
 /*
  * 収支ビュー
@@ -228,15 +259,6 @@ WHERE pl.month <= get_month(current_date)
 GROUP BY pl.month / 100
 HAVING SUM(pl.accrual_balance) <> 0 OR SUM(pl.cash_balance) <> 0
 ORDER BY pl.month / 100 DESC;
-
-
-/*
- * 日付から月を表す数値を取得
- * (例) '2019-03-03' を引数に与えると 201903 という数値に変換する
- */
-CREATE OR REPLACE FUNCTION get_month(a_date date) RETURNS integer IMMUTABLE AS $$
-    SELECT CAST ((EXTRACT(YEAR FROM a_date) * 100 + EXTRACT(MONTH FROM a_date)) AS integer);
-$$ LANGUAGE SQL;
 
 
 /*

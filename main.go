@@ -218,6 +218,37 @@ func main() {
 				},
 			},
 			{
+				Name:    "groups",
+				Aliases: []string{"gr"},
+				Usage:   "グループのオプション",
+				Subcommands: []*cli.Command{
+					{
+						Name:    "list",
+						Aliases: []string{"ls"},
+						Usage:   "グループを一覧",
+						Action:  cmdListGroups,
+					},
+					{
+						Name:    "add",
+						Aliases: []string{"a"},
+						Usage:   "グループを追加",
+						Action:  cmdAddGroup,
+					},
+					{
+						Name:    "edit",
+						Aliases: []string{"e"},
+						Usage:   "グループを編集",
+						Action:  cmdEditGroup,
+					},
+					{
+						Name:    "remove",
+						Aliases: []string{"r"},
+						Usage:   "グループを削除",
+						Action:  cmdRemoveGroup,
+					},
+				},
+			},
+			{
 				Name:  "history",
 				Usage: "履歴のオプション",
 				Subcommands: []*cli.Command{
@@ -510,11 +541,11 @@ func openFileInEditor(filename string) error {
 	return cmd.Run()
 }
 
-func readOrder(text string, numItems int) ([]int, error) {
-	var noArr []int
+func readInts(text string) ([]int, error) {
+	var ints []int
 
 	for _, line := range strings.Split(text, "\n") {
-		arr := strings.Split(line, " ")
+		arr := strings.Split(strings.TrimSpace(line), " ")
 
 		if len(arr) <= 1 {
 			continue
@@ -525,11 +556,24 @@ func readOrder(text string, numItems int) ([]int, error) {
 			return nil, errors.New("先頭が数値以外の行がある")
 		}
 
+		ints = append(ints, no)
+	}
+
+	return ints, nil
+}
+
+func readOrder(text string, numItems int) ([]int, error) {
+	var noArr []int
+
+	noArr, err := readInts(text)
+	if err != nil {
+		return nil, err
+	}
+
+	for no := range noArr {
 		if no < 0 || no >= numItems {
 			return nil, errors.New("数値が範囲外")
 		}
-
-		noArr = append(noArr, no)
 	}
 
 	if len(noArr) != numItems {
